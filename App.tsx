@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
-import { AppTab, AuthState, SMSAlert, RiskLevel } from './types';
+import { AppTab, AuthState, SMSAlert, RiskLevel, MonitoredNumber } from './types';
 import { Dashboard } from './components/Dashboard';
 import { AlertsView } from './components/AlertsView';
 import { ForensicsView } from './components/ForensicsView';
 import { SettingsView } from './components/SettingsView';
 import { PermissionDialog } from './components/PermissionDialog';
+import { ProfileView } from './components/ProfileView';
 
 const INITIAL_ALERTS: SMSAlert[] = [
   {
@@ -15,7 +16,8 @@ const INITIAL_ALERTS: SMSAlert[] = [
     originalText: 'SECURE-BANK: We detected a login attempt from London, UK. If this was not you, click here to secure your account: http://bank-secure-v2.net/verify',
     riskScore: 92,
     riskLevel: RiskLevel.CRITICAL,
-    reasoning: 'AI detected a phishing URL pattern combined with urgent language designed to trigger panic. Domain "bank-secure-v2.net" is blacklisted.'
+    reasoning: 'AI detected a phishing URL pattern. Identity verification status: Verified (Primary). Domain blacklisted.',
+    isAadhaarVerified: true
   },
   {
     id: '2',
@@ -24,7 +26,21 @@ const INITIAL_ALERTS: SMSAlert[] = [
     originalText: 'Transfer of $1,250.00 to ZELLE-USER-XY2 confirmed. Msg 2 to cancel.',
     riskScore: 78,
     riskLevel: RiskLevel.HIGH,
-    reasoning: 'Significant outgoing transaction detected shortly after a reported system configuration change. High value exceeds user preference.'
+    reasoning: 'Significant outgoing transaction detected. Identity verification status: Unverified Secondary. Elevated risk for identity mismatch.',
+    isAadhaarVerified: false
+  }
+];
+
+const INITIAL_SIMS: MonitoredNumber[] = [
+  {
+    id: 'primary',
+    phoneNumber: '+91 98765 43210',
+    isVerified: true,
+    isAadhaarVerified: true,
+    aadhaarLastFour: '4582',
+    carrier: 'Airtel Digital',
+    status: 'active',
+    simType: 'PRIMARY'
   }
 ];
 
@@ -34,33 +50,43 @@ const App: React.FC = () => {
   const [alerts, setAlerts] = useState<SMSAlert[]>(INITIAL_ALERTS);
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: true,
-    user: { name: 'John Doe', email: 'j.doe@example.com' }
+    user: { 
+      name: 'John Doe', 
+      email: 'j.doe@example.com',
+      monitoredNumbers: INITIAL_SIMS
+    }
   });
 
   const handleGrantPermission = () => {
     setShowPermission(false);
-    // In a real app, this would trigger navigator.permissions or specific android bridge calls
+  };
+
+  const handleAddNumber = (newNumber: MonitoredNumber) => {
+    if (authState.user) {
+      setAuthState({
+        ...authState,
+        user: {
+          ...authState.user,
+          monitoredNumbers: [...authState.user.monitoredNumbers, newNumber]
+        }
+      });
+    }
   };
 
   const renderContent = () => {
+    if (!authState.user) return null;
+
     switch (activeTab) {
       case 'dashboard': return <Dashboard />;
       case 'alerts': return <AlertsView alerts={alerts} />;
       case 'forensics': return <ForensicsView />;
       case 'settings': return <SettingsView />;
       case 'profile': return (
-        <div className="p-6 space-y-6">
-            <h1 className="text-3xl font-medium">Profile</h1>
-            <div className="bg-white p-6 rounded-[28px] border border-gray-100 shadow-sm text-center">
-                <div className="w-24 h-24 bg-[#6750a4] text-white flex items-center justify-center text-4xl font-bold rounded-full mx-auto mb-4">JD</div>
-                <h2 className="text-xl font-medium">{authState.user?.name}</h2>
-                <p className="text-gray-500">{authState.user?.email}</p>
-                <div className="mt-8 pt-8 border-t border-gray-50 flex flex-col gap-3">
-                    <button className="w-full py-3 bg-[#f3edf7] text-[#6750a4] rounded-full font-medium">Edit Profile</button>
-                    <button onClick={() => setAuthState({ isAuthenticated: false })} className="w-full py-3 text-red-600 font-medium">Log Out</button>
-                </div>
-            </div>
-        </div>
+        <ProfileView 
+          user={authState.user} 
+          onAddNumber={handleAddNumber} 
+          onLogout={() => setAuthState({ isAuthenticated: false })} 
+        />
       );
       default: return <Dashboard />;
     }
@@ -89,7 +115,14 @@ const App: React.FC = () => {
               className="w-full p-4 bg-[#f3edf7] rounded-2xl border-none outline-none focus:ring-2 focus:ring-[#6750a4]" 
             />
             <button 
-              onClick={() => setAuthState({ isAuthenticated: true, user: { name: 'John Doe', email: 'j.doe@example.com' } })}
+              onClick={() => setAuthState({ 
+                isAuthenticated: true, 
+                user: { 
+                  name: 'John Doe', 
+                  email: 'j.doe@example.com',
+                  monitoredNumbers: INITIAL_SIMS
+                } 
+              })}
               className="w-full py-4 bg-[#6750a4] text-white rounded-full font-bold shadow-md active:scale-95 transition-transform"
             >
               Sign In
@@ -109,7 +142,6 @@ const App: React.FC = () => {
         {renderContent()}
       </main>
 
-      {/* Android Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 h-20 bg-[#f3edf7] border-t border-[#eaddff] flex items-center justify-around px-4 z-40">
         <NavButton 
             active={activeTab === 'dashboard'} 

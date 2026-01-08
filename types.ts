@@ -6,6 +6,19 @@ export enum RiskLevel {
   CRITICAL = 'CRITICAL'
 }
 
+export type SIMType = 'PRIMARY' | 'SECONDARY';
+
+export interface MonitoredNumber {
+  id: string;
+  phoneNumber: string;
+  isVerified: boolean;
+  isAadhaarVerified: boolean;
+  aadhaarLastFour: string;
+  carrier: string;
+  status: 'active' | 'pending' | 'suspended';
+  simType: SIMType;
+}
+
 export interface SMSAlert {
   id: string;
   sender: string;
@@ -14,6 +27,7 @@ export interface SMSAlert {
   riskScore: number;
   riskLevel: RiskLevel;
   reasoning: string;
+  isAadhaarVerified?: boolean; // Influence of Aadhaar status on the alert
 }
 
 export interface UserDeviceProfile {
@@ -30,6 +44,7 @@ export interface AuthState {
   user?: {
     name: string;
     email: string;
+    monitoredNumbers: MonitoredNumber[];
   };
 }
 

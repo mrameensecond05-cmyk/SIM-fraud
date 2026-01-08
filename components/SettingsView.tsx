@@ -3,6 +3,15 @@ import React, { useState } from 'react';
 
 export const SettingsView: React.FC = () => {
   const [bankThreshold, setBankThreshold] = useState(500);
+  const [alerts, setAlerts] = useState({
+    largeTransfers: true,
+    international: true,
+    newBeneficiary: false
+  });
+
+  const toggleAlert = (key: keyof typeof alerts) => {
+    setAlerts(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   return (
     <div className="p-6 space-y-8 pb-24">
@@ -11,8 +20,9 @@ export const SettingsView: React.FC = () => {
         <p className="text-gray-500">Customize detection rules</p>
       </header>
 
+      {/* Existing Transaction Protection Section */}
       <section className="space-y-4">
-        <h3 className="text-lg font-medium px-2">Transaction Protection</h3>
+        <h3 className="text-lg font-medium px-2">Threshold Protection</h3>
         <div className="bg-white rounded-[28px] p-6 shadow-sm border border-gray-100 space-y-6">
           <div>
             <div className="flex justify-between mb-2">
@@ -38,39 +48,97 @@ export const SettingsView: React.FC = () => {
               <div className="font-medium">OTP Auto-Extraction</div>
               <div className="text-xs text-gray-400">Read codes without storing msg</div>
             </div>
-            <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-                <input type="checkbox" defaultChecked className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer right-0 border-green-400"/>
-                <label className="toggle-label block overflow-hidden h-6 rounded-full bg-green-400 cursor-pointer"></label>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" className="sr-only peer" defaultChecked />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#6750a4]"></div>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      {/* New Bank Transaction Alerts Section */}
+      <section className="space-y-4">
+        <h3 className="text-lg font-medium px-2">Bank Transaction Alerts</h3>
+        <div className="bg-white rounded-[28px] p-6 shadow-sm border border-gray-100 space-y-1">
+          
+          {/* Large Outgoing Transfers */}
+          <div className="flex items-center justify-between py-4">
+            <div className="pr-4">
+              <div className="font-medium text-gray-900">Large Outgoing Transfers</div>
+              <div className="text-xs text-gray-400">Alert for high-value fund movements</div>
             </div>
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <input 
+                type="checkbox" 
+                className="sr-only peer" 
+                checked={alerts.largeTransfers}
+                onChange={() => toggleAlert('largeTransfers')}
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#6750a4]"></div>
+            </label>
+          </div>
+
+          {/* International Transactions */}
+          <div className="flex items-center justify-between py-4 border-t border-gray-50">
+            <div className="pr-4">
+              <div className="font-medium text-gray-900">International Transactions</div>
+              <div className="text-xs text-gray-400">Flag cross-border payment activity</div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <input 
+                type="checkbox" 
+                className="sr-only peer" 
+                checked={alerts.international}
+                onChange={() => toggleAlert('international')}
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#6750a4]"></div>
+            </label>
+          </div>
+
+          {/* New Beneficiary Transfers */}
+          <div className="flex items-center justify-between py-4 border-t border-gray-50">
+            <div className="pr-4">
+              <div className="font-medium text-gray-900">New Beneficiary Transfers</div>
+              <div className="text-xs text-gray-400">Monitor payments to first-time recipients</div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <input 
+                type="checkbox" 
+                className="sr-only peer" 
+                checked={alerts.newBeneficiary}
+                onChange={() => toggleAlert('newBeneficiary')}
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#6750a4]"></div>
+            </label>
           </div>
         </div>
       </section>
 
       <section className="space-y-4">
-        <h3 className="text-lg font-medium px-2">Permissions</h3>
+        <h3 className="text-lg font-medium px-2">System Permissions</h3>
         <div className="space-y-2">
-            <button className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+            <button className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 shadow-sm transition-colors active:bg-gray-50">
                 <div className="flex items-center gap-4">
                     <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
                     </div>
                     <span className="font-medium">SMS Access</span>
                 </div>
-                <span className="text-green-600 text-sm font-medium">GRANTED</span>
+                <span className="text-green-600 text-sm font-bold tracking-tight">GRANTED</span>
             </button>
-            <button className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+            <button className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 shadow-sm transition-colors active:bg-gray-50">
                 <div className="flex items-center gap-4">
                     <div className="p-2 bg-purple-50 rounded-lg text-purple-600">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
                     </div>
                     <span className="font-medium">Notifications</span>
                 </div>
-                <span className="text-green-600 text-sm font-medium">GRANTED</span>
+                <span className="text-green-600 text-sm font-bold tracking-tight">GRANTED</span>
             </button>
         </div>
       </section>
 
-      <button className="w-full py-4 text-red-600 font-medium border border-red-100 rounded-[28px] hover:bg-red-50">
+      <button className="w-full py-4 text-red-600 font-bold border border-red-100 rounded-[28px] hover:bg-red-50 transition-colors">
         Reset Security Model
       </button>
     </div>
