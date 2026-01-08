@@ -27,7 +27,16 @@ export interface SMSAlert {
   riskScore: number;
   riskLevel: RiskLevel;
   reasoning: string;
-  isAadhaarVerified?: boolean; // Influence of Aadhaar status on the alert
+  isAadhaarVerified?: boolean;
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  activeSims: number;
+  threatsBlocked: number;
+  aiAccuracy: number;
+  systemLoad: number;
+  modelVesion: string;
 }
 
 export interface UserDeviceProfile {
@@ -44,8 +53,9 @@ export interface AuthState {
   user?: {
     name: string;
     email: string;
+    role: 'USER' | 'ADMIN';
     monitoredNumbers: MonitoredNumber[];
   };
 }
 
-export type AppTab = 'dashboard' | 'alerts' | 'forensics' | 'settings' | 'profile';
+export type AppTab = 'dashboard' | 'alerts' | 'forensics' | 'settings' | 'profile' | 'admin';

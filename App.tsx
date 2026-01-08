@@ -7,6 +7,7 @@ import { ForensicsView } from './components/ForensicsView';
 import { SettingsView } from './components/SettingsView';
 import { PermissionDialog } from './components/PermissionDialog';
 import { ProfileView } from './components/ProfileView';
+import { AdminPanelView } from './components/AdminPanelView';
 
 const INITIAL_ALERTS: SMSAlert[] = [
   {
@@ -53,6 +54,7 @@ const App: React.FC = () => {
     user: { 
       name: 'John Doe', 
       email: 'j.doe@example.com',
+      role: 'ADMIN', // Set to ADMIN by default for this view
       monitoredNumbers: INITIAL_SIMS
     }
   });
@@ -81,6 +83,7 @@ const App: React.FC = () => {
       case 'alerts': return <AlertsView alerts={alerts} />;
       case 'forensics': return <ForensicsView />;
       case 'settings': return <SettingsView />;
+      case 'admin': return <AdminPanelView alerts={alerts} />;
       case 'profile': return (
         <ProfileView 
           user={authState.user} 
@@ -120,6 +123,7 @@ const App: React.FC = () => {
                 user: { 
                   name: 'John Doe', 
                   email: 'j.doe@example.com',
+                  role: 'ADMIN',
                   monitoredNumbers: INITIAL_SIMS
                 } 
               })}
@@ -142,7 +146,7 @@ const App: React.FC = () => {
         {renderContent()}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 h-20 bg-[#f3edf7] border-t border-[#eaddff] flex items-center justify-around px-4 z-40">
+      <nav className="fixed bottom-0 left-0 right-0 h-20 bg-[#f3edf7] border-t border-[#eaddff] flex items-center justify-around px-2 z-40">
         <NavButton 
             active={activeTab === 'dashboard'} 
             onClick={() => setActiveTab('dashboard')} 
@@ -161,6 +165,14 @@ const App: React.FC = () => {
             label="SIM"
             icon={<svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M18 2h-8L4 8v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 16H7v-2h10v2zm0-4H7v-2h10v2zm-4-4H7V8h6v2z"/></svg>}
         />
+        {authState.user?.role === 'ADMIN' && (
+          <NavButton 
+              active={activeTab === 'admin'} 
+              onClick={() => setActiveTab('admin')} 
+              label="Admin"
+              icon={<svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>}
+          />
+        )}
         <NavButton 
             active={activeTab === 'settings'} 
             onClick={() => setActiveTab('settings')} 
@@ -187,10 +199,10 @@ interface NavBtnProps {
 
 const NavButton: React.FC<NavBtnProps> = ({ active, onClick, label, icon }) => (
     <button onClick={onClick} className="flex flex-col items-center justify-center gap-1 group">
-        <div className={`px-5 py-1 rounded-full transition-all duration-300 ${active ? 'bg-[#d3e3fd] text-[#041e49]' : 'text-[#49454f] group-active:bg-gray-200'}`}>
+        <div className={`px-4 py-1 rounded-full transition-all duration-300 ${active ? 'bg-[#d3e3fd] text-[#041e49]' : 'text-[#49454f] group-active:bg-gray-200'}`}>
             {icon}
         </div>
-        <span className={`text-xs font-medium transition-colors ${active ? 'text-[#1d1b20]' : 'text-[#49454f]'}`}>
+        <span className={`text-[10px] font-bold transition-colors uppercase tracking-tight ${active ? 'text-[#1d1b20]' : 'text-[#49454f]'}`}>
             {label}
         </span>
     </button>
