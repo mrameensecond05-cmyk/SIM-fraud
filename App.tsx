@@ -24,7 +24,7 @@ const INITIAL_ALERTS: SMSAlert[] = [
     id: '2',
     sender: 'CHASE-ALERT',
     timestamp: 'Today, 11:10 AM',
-    originalText: 'Transfer of $1,250.00 to ZELLE-USER-XY2 confirmed. Msg 2 to cancel.',
+    originalText: 'Transfer of ₹1,250.00 to ZELLE-USER-XY2 confirmed. Msg 2 to cancel.',
     riskScore: 78,
     riskLevel: RiskLevel.HIGH,
     reasoning: 'Significant outgoing transaction detected. Identity verification status: Unverified Secondary. Elevated risk for identity mismatch.',
@@ -103,7 +103,7 @@ const App: React.FC = () => {
             <div className="w-16 h-16 bg-[#6750a4] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
             </div>
-            <h1 className="text-3xl font-bold text-[#1d1b20]">SecureSIM AI</h1>
+            <h1 className="text-3xl font-bold text-[#1d1b20]">SIMtinel</h1>
             <p className="text-gray-600 mt-2">Enterprise Fraud Prevention</p>
           </div>
           <div className="bg-white p-8 rounded-[32px] shadow-sm space-y-4">

@@ -18,10 +18,10 @@ export const PermissionDialog: React.FC<Props> = ({ onGrant, onDeny }) => {
           </div>
         </div>
         <h2 className="text-2xl font-medium text-center text-gray-900 mb-4">
-          Allow SecureSIM to read your messages?
+          Allow SIMtinel to read your messages?
         </h2>
         <p className="text-[#49454f] text-center mb-8 leading-relaxed">
-          SecureSIM AI needs to monitor SMS traffic locally to detect fraud. Messages are never stored or shared with our servers.
+          SIMtinel needs to monitor SMS traffic locally to detect fraud. Messages are never stored or shared with our servers.
         </p>
         <div className="flex flex-col gap-3">
           <button

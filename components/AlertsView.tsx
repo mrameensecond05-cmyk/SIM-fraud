@@ -23,7 +23,7 @@ export const AlertsView: React.FC<Props> = ({ alerts }) => {
           </div>
           <h3 className="text-xl font-medium text-gray-900">No threats detected</h3>
           <p className="text-gray-500 max-w-xs mx-auto mt-2">
-            SecureSIM hasn't found any suspicious SMS traffic lately.
+            SIMtinel hasn't found any suspicious SMS traffic lately.
           </p>
         </div>
       ) : (

@@ -1,5 +1,5 @@
 {
-  "name": "SecureSIM AI - Fraud Detection",
+  "name": "SIMtinel - Fraud Detection",
   "description": "An Android-inspired fraud detection system that uses AI to analyze SMS traffic and detect SIM swap attacks in real-time, focusing on user privacy and carrier-level security forensics.",
   "requestFramePermissions": []
 }
