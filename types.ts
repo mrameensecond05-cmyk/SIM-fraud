@@ -30,26 +30,9 @@ export interface SMSAlert {
   isAadhaarVerified?: boolean;
 }
 
-export interface AdminStats {
-  totalUsers: number;
-  activeSims: number;
-  threatsBlocked: number;
-  aiAccuracy: number;
-  systemLoad: number;
-  modelVesion: string;
-}
-
-export interface UserDeviceProfile {
-  imsi: string;
-  imei: string;
-  lastSimSwap: string;
-  carrier: string;
-  phoneNumber: string;
-  isRegistered: boolean;
-}
-
 export interface AuthState {
   isAuthenticated: boolean;
+  view: 'LOGIN' | 'REGISTER';
   user?: {
     name: string;
     email: string;
@@ -58,4 +41,4 @@ export interface AuthState {
   };
 }
 
-export type AppTab = 'dashboard' | 'alerts' | 'forensics' | 'settings' | 'profile' | 'admin';
+export type AppTab = 'dashboard' | 'alerts' | 'forensics' | 'settings' | 'profile';
