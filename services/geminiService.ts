@@ -1,45 +1,30 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+// Replaced GoogleGenAI with Local Ollama Backend Call
 import { RiskLevel } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Point this to your computer's IP if running on Android!
+const API_URL = 'http://localhost:5000/api';
 
 export const analyzeSMSTraffic = async (
-  smsText: string, 
+  smsText: string,
   deviceContext: { imsiMatch: boolean, simSwapHours: number, isAadhaarVerified: boolean }
 ) => {
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `
-        Analyze this SMS for fraud detection.
-        SMS Content: "${smsText}"
-        Device Context:
-        - IMSI Match with Registered Device: ${deviceContext.imsiMatch}
-        - Time since last SIM swap: ${deviceContext.simSwapHours} hours
-        - Aadhaar Verified Identity: ${deviceContext.isAadhaarVerified}
-        
-        CRITICAL LOGIC: 
-        1. If simSwapHours < 72, elevate risk significantly.
-        2. If isAadhaarVerified is FALSE, add a "Lack of Identity Trust" penalty to the risk score.
-        3. If BOTH are suspicious, mark as CRITICAL.
-      `,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            riskScore: { type: Type.NUMBER, description: "Score from 0 to 100" },
-            riskLevel: { type: Type.STRING, enum: Object.values(RiskLevel) },
-            reasoning: { type: Type.STRING, description: "Short explanation including Aadhaar context" },
-            category: { type: Type.STRING, description: "Phishing, Transaction, Social Engineering, or Normal" }
-          },
-          required: ["riskScore", "riskLevel", "reasoning", "category"]
-        }
-      }
+    const response = await fetch(`${API_URL}/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        smsText,
+        deviceContext,
+        userId: 1 // Default user for now, should be from Auth context
+      })
     });
 
-    return JSON.parse(response.text);
+    if (!response.ok) throw new Error("Backend Analysis Failed");
+
+    const data = await response.json();
+    return data.analysis;
+
   } catch (error) {
     console.error("Analysis failed:", error);
     return {

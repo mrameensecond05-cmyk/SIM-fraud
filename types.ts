@@ -42,3 +42,25 @@ export interface AuthState {
 }
 
 export type AppTab = 'dashboard' | 'alerts' | 'forensics' | 'settings' | 'profile';
+
+export interface AdminIncident {
+  id: string;
+  userId: string;
+  userName: string;
+  type: 'PHISHING_STOPPED' | 'ACCOUNT_FLAGGED' | 'SUSPICIOUS_LOGIN' | 'SIM_SWAP_BLOCKED';
+  severity: RiskLevel;
+  timestamp: string;
+  details: string;
+  status: 'ACTIVE' | 'RESOLVED' | 'INVESTIGATING';
+}
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  status: 'ACTIVE' | 'SUSPENDED' | 'FLAGGED';
+  riskScore: number;
+  lastActive: string;
+  devices: number;
+  threatsBlocked: number;
+}
