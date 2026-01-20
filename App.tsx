@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { AppTab, SMSAlert, RiskLevel, MonitoredNumber, AuthState } from './types';
+import React, { useState, useEffect } from 'react';
+import { AppTab, SMSAlert, MonitoredNumber, AuthState } from './types';
 import { Dashboard } from './components/Dashboard';
 import { AlertsView } from './components/AlertsView';
 import { ForensicsView } from './components/ForensicsView';
@@ -11,29 +11,7 @@ import { AdminDashboard } from './components/admin/AdminDashboard';
 import { UserManagementView } from './components/admin/UserManagementView';
 import { IncidentLogView } from './components/admin/IncidentLogView';
 import { GlobalAlertsView } from './components/admin/GlobalAlertsView';
-
-const INITIAL_ALERTS: SMSAlert[] = [
-  {
-    id: '1',
-    sender: '+1 (800) 999-0123',
-    timestamp: 'Today, 2:45 PM',
-    originalText: 'SECURE-BANK: We detected a login attempt from London, UK. If this was not you, click here to secure your account: http://bank-secure-v2.net/verify',
-    riskScore: 92,
-    riskLevel: RiskLevel.CRITICAL,
-    reasoning: 'AI detected a phishing URL pattern. Identity verification status: Verified (Primary). Domain blacklisted.',
-    isAadhaarVerified: true
-  },
-  {
-    id: '2',
-    sender: 'CHASE-ALERT',
-    timestamp: 'Today, 11:10 AM',
-    originalText: 'Transfer of ₹1,250.00 to ZELLE-USER-XY2 confirmed. Msg 2 to cancel.',
-    riskScore: 78,
-    riskLevel: RiskLevel.HIGH,
-    reasoning: 'Significant outgoing transaction detected. Identity verification status: Unverified Secondary. Elevated risk for identity mismatch.',
-    isAadhaarVerified: false
-  }
-];
+import { UserService } from './services/userService';
 
 const INITIAL_SIMS: MonitoredNumber[] = [
   {
@@ -51,7 +29,14 @@ const INITIAL_SIMS: MonitoredNumber[] = [
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
   const [showPermission, setShowPermission] = useState(true);
-  const [alerts] = useState<SMSAlert[]>(INITIAL_ALERTS);
+  const [alerts, setAlerts] = useState<SMSAlert[]>([]);
+
+  // Fetch real alerts from backend
+  useEffect(() => {
+    UserService.getAlerts()
+      .then(data => setAlerts(data))
+      .catch(err => console.error("Failed to fetch alerts:", err));
+  }, []);
 
   const [auth, setAuth] = useState<AuthState>({
     isAuthenticated: false,

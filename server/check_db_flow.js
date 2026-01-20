@@ -49,6 +49,7 @@ async function checkDataFlow() {
 
     } catch (error) {
         console.error("\n❌ DATA FLOW FAILED!");
+        console.error("Full Error:", error);
         console.error("Error Message:", error.message);
         if (error.code === 'ER_ACCESS_DENIED_ERROR') {
             console.error("-> Check your DB_PASSWORD in .env file.");
