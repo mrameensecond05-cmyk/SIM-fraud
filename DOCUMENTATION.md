@@ -1,7 +1,7 @@
 # SIMtinel Technical Documentation v1.0
 
 ## 1. Executive Summary
-SIMtinel is an advanced fraud detection and SIM integrity monitoring system designed to protect users from SIM swap attacks, phishing, and unauthorized transaction intercepts. By combining local device heuristics with the **Google Gemini 3 Flash** neural engine, SIMtinel provides real-time risk assessment of incoming SMS traffic.
+SIMtinel is an advanced fraud detection and SIM integrity monitoring system designed to protect users from SIM swap attacks, phishing, and unauthorized transaction intercepts. By combining local device heuristics with the **Ollama (Mistral)** neural engine, SIMtinel provides real-time risk assessment of incoming SMS traffic.
 
 ---
 
@@ -10,7 +10,7 @@ SIMtinel is an advanced fraud detection and SIM integrity monitoring system desi
 ### 2.1 Current Web Stack (MVP/Prototype)
 - **Frontend:** React 19, Tailwind CSS (Mobile-First Design)
 - **State Management:** React Context + Hooks
-- **AI Engine:** Google Generative AI (@google/genai)
+- **AI Engine:** Ollama (Mistral - Local Inference)
 - **Visualizations:** Recharts (SVG-based)
 - **Heuristics:** Simulated Java Spring Boot backend (Aadhaar Genuineness Service)
 
@@ -31,10 +31,10 @@ SIMtinel is an advanced fraud detection and SIM integrity monitoring system desi
    - Check `IMSI` match (Is the current SIM the registered one?).
    - Check `SIM Swap Timer` (Has the SIM changed in the last 72 hours?).
    - Check `Identity Trust` (Is the number Aadhaar-verified?).
-4. **AI Inference:** Payload sent to Gemini with strict JSON schema response.
+4. **AI Inference:** Payload sent to local Ollama instance with strict JSON schema response.
 
 ### 3.2 AI Prompt Engineering
-SIMtinel utilizes `gemini-3-flash-preview` for low-latency analysis. The system instruction prioritizes:
+SIMtinel utilizes `mistral` (via Ollama) for low-latency analysis. The system instruction prioritizes:
 - **Financial Pattern Recognition:** Detecting "Zelle," "OTP," "Verify," and "Urgent."
 - **Risk Weighting:** Elevating scores if the device context (SIM Swap < 72h) is compromised.
 - **Identity Verification Status:** Adjusting confidence levels based on Aadhaar linkage.
@@ -91,13 +91,14 @@ SIMtinel utilizes `gemini-3-flash-preview` for low-latency analysis. The system 
 
 ## 7. API Reference
 
-### Gemini Analysis Request
-```typescript
-model: "gemini-3-flash-preview",
-contents: "Analyze this SMS...",
-config: {
-  responseMimeType: "application/json",
-  responseSchema: { ...RiskSchema }
+### Ollama Analysis Request
+```bash
+POST http://localhost:11434/api/generate
+{
+  "model": "mistral",
+  "prompt": "...",
+  "format": "json",
+  "stream": false
 }
 ```
 
