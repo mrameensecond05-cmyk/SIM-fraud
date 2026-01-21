@@ -2,6 +2,7 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const cors = require('cors');
 const { analyzeWithOllama } = require('./aiService');
+const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
 const app = express();
@@ -31,6 +32,156 @@ pool.getConnection()
     });
 
 // --- API ROUTES ---
+
+// --- AUTH ROUTES ---
+
+// Helper: Seed Roles if empty
+async function seedRoles() {
+    try {
+        const [rows] = await pool.query('SELECT COUNT(*) as count FROM SIMFraudRole');
+        if (rows[0].count === 0) {
+            console.log("Seeding Roles...");
+            await pool.query("INSERT INTO SIMFraudRole (role_name) VALUES ('USER'), ('ADMIN')");
+        }
+        seedAdmin(); // Chain the admin seed
+    } catch (err) {
+        console.error("Role Seeding Error:", err);
+    }
+}
+
+async function seedAdmin() {
+    try {
+        const [rows] = await pool.query("SELECT id FROM SIMFraudLogin WHERE email = 'admin@simtinel.com'");
+        if (rows.length === 0) {
+            console.log("Seeding Default Admin...");
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash('admin123', salt);
+
+            // Get Admin Role ID
+            const [roles] = await pool.query("SELECT id FROM SIMFraudRole WHERE role_name = 'ADMIN'");
+            const roleId = roles[0]?.id;
+
+            if (roleId) {
+                const [res] = await pool.query(`
+                    INSERT INTO SIMFraudLogin (email, password_hash, role_id)
+                    VALUES ('admin@simtinel.com', ?, ?)
+                `, [hashedPassword, roleId]);
+
+                await pool.query(`
+                    INSERT INTO SIMFraudUserProfile (login_id, name, email)
+                    VALUES (?, 'System Admin', 'admin@simtinel.com')
+                `, [res.insertId]);
+                console.log("Default Admin Created: admin@simtinel.com / admin123");
+            }
+        }
+    } catch (err) {
+        console.error("Admin Seeding Error:", err);
+    }
+}
+seedRoles();
+
+// Register Endpoint
+app.post('/api/register', async (req, res) => {
+    const { name, email, phone, password } = req.body;
+
+    // Basic Validation
+    if (!name || !email || !password) {
+        return res.status(400).json({ error: "Name, email, and password are required." });
+    }
+
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        // 1. Check if user exists
+        const [existing] = await conn.query('SELECT id FROM SIMFraudLogin WHERE email = ?', [email]);
+        if (existing.length > 0) {
+            await conn.rollback();
+            return res.status(409).json({ error: "Email already registered." });
+        }
+
+        // 2. Hash Password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // 3. Get USER Role ID
+        const [roles] = await conn.query("SELECT id FROM SIMFraudRole WHERE role_name = 'USER'");
+        const roleId = roles[0]?.id || 1; // Default to 1 if not found
+
+        // 4. Create Login
+        const [loginResult] = await conn.query(`
+            INSERT INTO SIMFraudLogin (email, phone_number, password_hash, role_id)
+            VALUES (?, ?, ?, ?)
+        `, [email, phone || null, hashedPassword, roleId]);
+
+        const loginId = loginResult.insertId;
+
+        // 5. Create Profile
+        await conn.query(`
+            INSERT INTO SIMFraudUserProfile (login_id, name, email, phone)
+            VALUES (?, ?, ?, ?)
+        `, [loginId, name, email, phone || null]);
+
+        await conn.commit();
+
+        res.status(201).json({ message: "Registration successful", success: true });
+
+    } catch (err) {
+        await conn.rollback();
+        console.error("Register Error:", err);
+        res.status(500).json({ error: "Registration failed. Please try again." });
+    } finally {
+        conn.release();
+    }
+});
+
+// Login Endpoint
+app.post('/api/login', async (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ error: "Email and password required." });
+    }
+
+    try {
+        // 1. Find User by Email
+        const [users] = await pool.query(`
+            SELECT l.id as login_id, l.password_hash, l.role_id, r.role_name, p.name, p.id as profile_id
+            FROM SIMFraudLogin l
+            JOIN SIMFraudRole r ON l.role_id = r.id
+            LEFT JOIN SIMFraudUserProfile p ON l.id = p.login_id
+            WHERE l.email = ?
+        `, [email]);
+
+        if (users.length === 0) {
+            return res.status(401).json({ error: "Invalid credentials." });
+        }
+
+        const user = users[0];
+
+        // 2. Verify Password
+        const isMatch = await bcrypt.compare(password, user.password_hash);
+        if (!isMatch) {
+            return res.status(401).json({ error: "Invalid credentials." });
+        }
+
+        // 3. Return User Data (No Token for this MVP, just user object)
+        res.json({
+            success: true,
+            user: {
+                id: user.profile_id,
+                name: user.name || 'User',
+                email: email,
+                role: user.role_name,
+                loginId: user.login_id
+            }
+        });
+
+    } catch (err) {
+        console.error("Login Error:", err);
+        res.status(500).json({ error: "Login failed." });
+    }
+});
 
 // Get Stats for Dashboard
 app.get('/api/stats', async (req, res) => {

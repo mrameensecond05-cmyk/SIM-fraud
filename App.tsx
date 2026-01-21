@@ -45,23 +45,50 @@ const App: React.FC = () => {
   });
 
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleAuthSubmit = (e: React.FormEvent) => {
+  const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
+    setLoading(true);
 
-    // Quick admin check (Mock logic)
-    const isAdmin = formData.email.toLowerCase() === 'admin@simtinel.com';
+    try {
+      if (auth.view === 'LOGIN') {
+        // Login Logic
+        const data = await UserService.login({ email: formData.email, password: formData.password });
+        if (data.success && data.user) {
+          setAuth({
+            isAuthenticated: true,
+            view: 'LOGIN',
+            user: {
+              ...data.user,
+              role: data.user.role || 'USER',
+              // Add mock monitor numbers for now, in real app fetch these
+              monitoredNumbers: INITIAL_SIMS
+            }
+          });
+        }
+      } else {
+        // Register Logic
+        if (!formData.name) throw new Error("Name is required");
+        if (formData.password.length < 6) throw new Error("Password must be at least 6 characters");
 
-    setAuth({
-      ...auth,
-      isAuthenticated: true,
-      user: {
-        name: isAdmin ? 'System Administrator' : (formData.name || 'Alex Smith'),
-        email: formData.email,
-        role: isAdmin ? 'ADMIN' : 'USER',
-        monitoredNumbers: INITIAL_SIMS
+        await UserService.register({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password
+        });
+
+        // Auto login or switch to login view
+        alert("Registration Successful! Please login.");
+        setAuth({ ...auth, view: 'LOGIN' });
       }
-    });
+    } catch (err: any) {
+      setErrorMsg(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAddNumber = (newNumber: MonitoredNumber) => {
@@ -105,6 +132,11 @@ const App: React.FC = () => {
             </div>
 
             <form onSubmit={handleAuthSubmit} className="space-y-4">
+              {errorMsg && (
+                <div className="p-3 bg-red-100 text-red-700 rounded-xl text-sm font-medium text-center">
+                  {errorMsg}
+                </div>
+              )}
               {auth.view === 'REGISTER' && (
                 <input
                   type="text"
