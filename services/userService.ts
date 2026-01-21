@@ -1,6 +1,11 @@
 import { SMSAlert } from '../types';
 
-const API_URL = '/api';
+import { Capacitor } from '@capacitor/core';
+
+// IMPORTANT: For Android, you MUST replace 'YOUR_SERVER_IP' with your actual computer/server IP address (e.g., 'http://192.168.1.50:5000/api')
+// 'localhost' will NOT work on the Android device/emulator.
+const SERVER_IP = 'http://192.168.1.10:5000'; // <--- CHANGE THIS TO YOUR LOCAL IP
+const API_URL = Capacitor.getPlatform() === 'web' ? '/api' : `${SERVER_IP}/api`;
 
 export const UserService = {
     // Auth - Login
