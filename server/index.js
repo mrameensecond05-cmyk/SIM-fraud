@@ -309,49 +309,49 @@ app.get('/api/alerts', async (req, res) => {
 });
 
 // Analyze SMS (AI + DB)
+// Analyze SMS (AI + DB)
 app.post('/api/analyze', async (req, res) => {
     const { smsText, deviceContext, userId } = req.body;
 
     try {
-        // 1. Get AI Analysis
-        const analysis = await analyzeWithOllama(smsText, deviceContext || {});
-
-        // 2. Simulate Transaction ID (In real app, we'd have a transaction first)
-        // For this demo, we'll create a dummy transaction if one doesn't exist, 
-        // OR just log the prediction directly if your schema allows null transaction.
-        // YOUR SCHEMA: Prediction requires `transaction_id`.
-
-        // Let's create a placeholder transaction for this SMS event
+        // 1. Create Placeholder Transaction (Required for AI context)
+        // In a real app, the transaction would theoretically exist before fraud check,
+        // or be created here as part of the flow.
         const [txResult] = await pool.query(`
             INSERT INTO SIMFraudTransaction 
-            (user_id, amount, channel, status, tx_time) 
+            (user_id, amount, channel, status, timestamp) 
             VALUES (?, 0.00, 'OTHER', 'initiated', NOW())
         `, [userId || 1]); // Default to user 1 if not provided
 
         const txId = txResult.insertId;
 
-        // 3. Save Prediction
+        // 2. Get AI Analysis (Advanced Context-Aware)
+        const { analyzeFraud } = require('./aiService');
+        const analysis = await analyzeFraud(txId);
+
+        // 3. Save Prediction (SIMFraudPredictionOutput)
+        // Mapping new keys from Ollama JSON: risk_score, decision, risk_level
         const [predResult] = await pool.query(`
             INSERT INTO SIMFraudPredictionOutput
             (transaction_id, fraud_score, decision, features_json, explanation_json)
             VALUES (?, ?, ?, ?, ?)
         `, [
             txId,
-            analysis.riskScore,
-            analysis.riskLevel === 'CRITICAL' ? 'BLOCK' : 'ALLOW',
+            analysis.risk_score || 0,
+            analysis.decision || 'BLOCK', // Default if undefined
             JSON.stringify({ sms: smsText, context: deviceContext }),
-            JSON.stringify(analysis.reasoning)
+            JSON.stringify(analysis.reasons || [])
         ]);
 
         const predId = predResult.insertId;
 
         // 4. Create Alert if High Risk
-        if (['HIGH', 'CRITICAL'].includes(analysis.riskLevel)) {
+        if (['HIGH', 'CRITICAL'].includes(analysis.risk_level)) {
             await pool.query(`
                 INSERT INTO SIMFraudAlert
                 (prediction_id, severity, status)
                 VALUES (?, ?, 'open')
-            `, [predId, analysis.riskLevel]);
+            `, [predId, analysis.risk_level]);
         }
 
         res.json({
