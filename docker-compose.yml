@@ -18,11 +18,18 @@ services:
       - DB_USER=root
       - DB_PASSWORD=rootpassword
       - DB_NAME=simfraud_db
-      - OLLAMA_URL=http://172.17.0.1:11434/api/generate
+      - OLLAMA_URL=http://ollama:11434/api/generate
     depends_on:
       - db
-    extra_hosts:
-      - "172.17.0.1:host-gateway"
+      - ollama
+    restart: always
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
     restart: always
 
   db:
@@ -50,3 +57,4 @@ services:
 
 volumes:
   db_data:
+  ollama_models:

@@ -12,6 +12,7 @@ import { UserManagementView } from './components/admin/UserManagementView';
 import { IncidentLogView } from './components/admin/IncidentLogView';
 import { GlobalAlertsView } from './components/admin/GlobalAlertsView';
 import { UserService } from './services/userService';
+import SIMSentinel from './src/plugins/SIMSentinel';
 
 const INITIAL_SIMS: MonitoredNumber[] = [
   {
@@ -31,6 +32,73 @@ const App: React.FC = () => {
   const [showPermission, setShowPermission] = useState(true);
   const [alerts, setAlerts] = useState<SMSAlert[]>([]);
 
+  // Use SIMSentinel plugin to check/request permissions on mount or when dialog is acted upon
+  const handlePermissionGrant = async () => {
+    try {
+      const result = await SIMSentinel.requestPermissions();
+      if (result.granted) {
+        setShowPermission(false);
+        // Fetch identifiers after permission grant
+        try {
+          const ids = await SIMSentinel.getIdentifiers();
+          console.log("Device ID:", ids);
+          // TODO: Store this ID or use it for registration if needed
+        } catch (e) {
+          console.warn("Could not get identifiers:", e);
+        }
+      } else {
+        alert("Permissions are required for the app to function properly.");
+      }
+    } catch (error) {
+      console.error("Permission request failed:", error);
+      alert("Failed to request permissions. Please enable them in settings.");
+    }
+  };
+
+  const handlePermissionDeny = () => {
+    setShowPermission(false);
+    // Optionally show a warning that features won't work
+  };
+
+  // 1. Setup SMS Listener
+  useEffect(() => {
+    let listener: any;
+    const setupListener = async () => {
+      listener = await SIMSentinel.addListener('smsReceived', async (sms) => {
+        console.log("New SMS Received:", sms);
+
+        // Only process if user is logged in
+        if (auth.user) {
+          // Send to backend for analysis
+          try {
+            const result = await UserService.analyzeSms({
+              smsText: sms.message,
+              sender: sms.sender,
+              timestamp: sms.timestamp,
+              userId: auth.user.id
+            });
+
+            // If high risk, maybe show a local alert immediately?
+            if (result.analysis.risk_level === 'HIGH' || result.analysis.risk_level === 'CRITICAL') {
+              alert(`WARNING: High Risk SMS Detected!\n${result.analysis.summary}`);
+            }
+
+            // Refresh alerts
+            const newAlerts = await UserService.getAlerts();
+            setAlerts(newAlerts);
+          } catch (e) {
+            console.error("Analysis Error:", e);
+          }
+        }
+      });
+    };
+    setupListener();
+
+    return () => {
+      if (listener) listener.remove();
+    };
+  }, [auth.user]);
+
   // Fetch real alerts from backend
   useEffect(() => {
     UserService.getAlerts()
@@ -43,6 +111,49 @@ const App: React.FC = () => {
     view: 'LOGIN',
     user: undefined
   });
+
+  // 1. Setup SMS Listener
+  useEffect(() => {
+    let listener: any;
+    const setupListener = async () => {
+      try {
+        listener = await SIMSentinel.addListener('smsReceived', async (sms: any) => {
+          console.log("New SMS Received:", sms);
+
+          // Only process if user is logged in
+          if (auth.user) {
+            // Send to backend for analysis
+            try {
+              const result = await UserService.analyzeSms({
+                smsText: sms.message,
+                sender: sms.sender,
+                timestamp: sms.timestamp,
+                userId: auth.user.id
+              });
+
+              // If high risk, maybe show a local alert immediately?
+              if (result.analysis.risk_level === 'HIGH' || result.analysis.risk_level === 'CRITICAL') {
+                alert(`WARNING: High Risk SMS Detected!\n${result.analysis.summary}`);
+              }
+
+              // Refresh alerts
+              const newAlerts = await UserService.getAlerts();
+              setAlerts(newAlerts);
+            } catch (e) {
+              console.error("Analysis Error:", e);
+            }
+          }
+        });
+      } catch (e) {
+        console.error("Failed to setup listener:", e);
+      }
+    };
+    setupListener();
+
+    return () => {
+      if (listener) listener.remove();
+    };
+  }, [auth.user]);
 
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -211,7 +322,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f7f9fc]">
-      {showPermission && <PermissionDialog onGrant={() => setShowPermission(false)} onDeny={() => setShowPermission(false)} />}
+      {showPermission && <PermissionDialog onGrant={handlePermissionGrant} onDeny={handlePermissionDeny} />}
 
       <main className="flex-1 overflow-y-auto">
         {renderContent()}

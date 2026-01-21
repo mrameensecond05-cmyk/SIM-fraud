@@ -143,6 +143,16 @@ INSERT INTO SIMFraudConfig (param_name, param_value) VALUES
 ('step_up_threshold', '0.65')
 ON DUPLICATE KEY UPDATE param_value=VALUES(param_value);
 
+-- 12. SIMFraudOTP (New - Phone Verification)
+CREATE TABLE IF NOT EXISTS SIMFraudOTP (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    phone_number VARCHAR(20) NOT NULL,
+    otp_code VARCHAR(10) NOT NULL,
+    is_verified BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL
+);
+
 -- Initial Roles
 INSERT INTO SIMFraudRole (role_name) VALUES ('USER'), ('ADMIN')
 ON DUPLICATE KEY UPDATE role_name=role_name;

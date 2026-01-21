@@ -58,7 +58,86 @@ async function analyzeFraud(transactionId) {
             ? `${lastLogin.login_time} from ${lastLogin.ip_address}`
             : "Unknown";
 
-        // 2. Construct Prompt using User's Template
+        // 2. Rule-Based Checks (Deterministic triggers)
+
+        // A. Extract Amount from SMS Context (if available)
+        let extractedAmount = 0;
+        let smsText = "";
+        try {
+            const features = JSON.parse(txRows[0].features_json || '{}'); // Assuming we store features or need to fetch prediction to get features... wait, txRows has columns from Transaction table. 
+            // In index.js, we store SMS in PredictionOutput features_json. 
+            // But here we only have txId. We might need to look at what inputs caused this.
+            // Actually, for the new flow, we should pass smsText/context optionally or fetch from Prediction if it exists.
+            // Let's assume the calling function (index.js) just inserted the transaction.
+            // But wait, index.js inserts transaction with amount 0.00.
+            // We need to parse amount BEFORE inserting into transaction in index.js or update it here.
+
+            // For now, let's look at the transaction amount if it was correctly set, 
+            // OR checks generic regex on the 'features' if we passed it.
+            // But we don't have access to the raw request body here easily without passing it.
+            // Let's rely on the assumption that we will query the PredictionOutput if it existed, but it doesn't exist yet.
+
+            // CORRECT APPROACH: Use the 'deviceContext' or 'smsText' if they were stored in the Transaction metadata (which we don't have).
+            // Let's assume we rely on the DB state.
+        } catch (e) { }
+
+        // B. Multiple OTP Check (Velocity Check)
+        const [velocityRows] = await pool.query(`
+            SELECT COUNT(*) to_count 
+            FROM SIMFraudTransaction 
+            WHERE user_id = ? 
+            AND timestamp > DATE_SUB(NOW(), INTERVAL 10 MINUTE)
+        `, [tx.user_id]);
+
+        const velocityCount = velocityRows[0].to_count;
+        let ruleBasedVerdict = null;
+
+        if (velocityCount >= 5) {
+            console.log(`[RULE] Multiple OTP Trigger: ${velocityCount} in 10m`);
+            ruleBasedVerdict = {
+                risk_score: 0.95,
+                risk_level: "CRITICAL",
+                decision: "BLOCK",
+                reasons: [`Velocity Limit Exceeded: ${velocityCount} transactions in 10 minutes (Multi-OTP Attack)`],
+                actions: ["Block Account", "Notify User"],
+                summary: "System detected a burst of SMS/Transactions indicating a potential OTP bombing or concurrent attacks.",
+                admin_note: "Velocity Rule Triggered"
+            };
+        }
+
+        // C. Transaction Limit Check (assuming amount is in tx.amount)
+        const USER_SET_LIMIT = 50000; // Mock user limit
+        // Since we insert 0.00 in index.js, this check might fail unless we update index.js to parse amount first.
+        // We will do that in the next step.
+        if (tx.amount > USER_SET_LIMIT) {
+            console.log(`[RULE] Limit Exceeded: ${tx.amount} > ${USER_SET_LIMIT}`);
+            // If velocity is also high, critical. Else Medium/High.
+            if (!ruleBasedVerdict) {
+                ruleBasedVerdict = {
+                    risk_score: 0.80,
+                    risk_level: "HIGH",
+                    decision: "STEP_UP",
+                    reasons: [`Transaction Amount ₹${tx.amount} exceeds user limit of ₹${USER_SET_LIMIT}`],
+                    actions: ["Verify with Call", "2FA"],
+                    summary: "Transaction value exceeds defined safety thresholds.",
+                    admin_note: "Value Rule Triggered"
+                };
+            } else {
+                ruleBasedVerdict.reasons.push(`Amount ₹${tx.amount} exceeds limit`);
+            }
+        }
+
+        // Return immediately if CRITICAL rule hit
+        if (ruleBasedVerdict && ruleBasedVerdict.risk_level === 'CRITICAL') {
+            // Log it
+            await pool.query(`
+                INSERT INTO SIMFraudAuditLog (actor_login_id, action, entity_type, entity_id, metadata_json)
+                VALUES (1, 'RULE_ENGINE', 'transaction', ?, ?)
+            `, [transactionId, JSON.stringify(ruleBasedVerdict)]);
+            return ruleBasedVerdict;
+        }
+
+        // 3. Construct Prompt using User's Template
         const prompt = `
 SYSTEM PROMPT (send to Ollama /api/generate with format: "json"):
 ---
@@ -81,11 +160,12 @@ Analyze transaction ID ${tx.id} for ${tx.name} (${tx.phone}):
 - Recent SIM: ${simContext}
 - Last login: ${loginContext}
 - Fraud config: block_threshold=${blockThreshold}
+- Velocity Check: ${velocityCount} transactions in last 10 mins
 
 Give fraud analysis:
         `;
 
-        // 3. Call Ollama
+        // 4. Call Ollama
         console.log(`Sending Prompt for Tx ${transactionId}...`);
         const response = await axios.post(OLLAMA_URL, {
             model: MODEL_NAME,
@@ -94,7 +174,7 @@ Give fraud analysis:
             format: "json"
         });
 
-        // 4. Parse Response
+        // 5. Parse Response
         let analysis;
         try {
             // Check if response.data.response is string or object
@@ -112,7 +192,14 @@ Give fraud analysis:
             };
         }
 
-        // 5. Save Audit Log
+        // Merge Rule Reasoning if High/Critical
+        if (ruleBasedVerdict) {
+            analysis.reasons = [...(analysis.reasons || []), ...ruleBasedVerdict.reasons];
+            analysis.risk_score = Math.max(analysis.risk_score, ruleBasedVerdict.risk_score);
+            if (ruleBasedVerdict.decision === 'BLOCK') analysis.decision = 'BLOCK';
+        }
+
+        // 6. Save Audit Log
         await pool.query(`
             INSERT INTO SIMFraudAuditLog (actor_login_id, action, entity_type, entity_id, metadata_json)
             VALUES (1, 'OLLAMA_ANALYSIS', 'transaction', ?, ?)

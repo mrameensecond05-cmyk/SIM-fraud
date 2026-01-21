@@ -25,6 +25,7 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
       }
-    }
+    },
+    base: './', // REQUIRED for Capacitor to load assets from file://
   };
 });

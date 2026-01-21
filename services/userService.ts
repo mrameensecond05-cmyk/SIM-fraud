@@ -1,11 +1,15 @@
 import { SMSAlert } from '../types';
-
 import { Capacitor } from '@capacitor/core';
 
-// IMPORTANT: For Android, you MUST replace 'YOUR_SERVER_IP' with your actual computer/server IP address (e.g., 'http://192.168.1.50:5000/api')
-// 'localhost' will NOT work on the Android device/emulator.
-const SERVER_IP = 'http://192.168.1.10:5000'; // <--- CHANGE THIS TO YOUR LOCAL IP
-const API_URL = Capacitor.getPlatform() === 'web' ? '/api' : `${SERVER_IP}/api`;
+// ---------------------------------------------------------------------------
+// 🔧 PRODUCTION CONFIGURATION
+// ---------------------------------------------------------------------------
+// For Android/iOS: Replace with your LIVE SERVER IP or Domain (e.g., 'https://api.myapp.com')
+// For Web: It uses relative paths ('/api') automatically via Nginx/Proxy.
+export const SERVER_IP = 'http://192.168.1.13:5000';
+// ---------------------------------------------------------------------------
+
+export const API_URL = Capacitor.getPlatform() === 'web' ? '/api' : `${SERVER_IP}/api`;
 
 export const UserService = {
     // Auth - Login
@@ -59,13 +63,21 @@ export const UserService = {
         }
     },
 
-    // Simulate sending an SMS to the backend for analysis
-    analyzeSms: async (smsText: string, deviceContext: any) => {
+    // Send SMS to backend for analysis
+    analyzeSms: async (data: { smsText: string, sender: string, timestamp: number, userId: string }) => {
         try {
             const res = await fetch(`${API_URL}/analyze`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ smsText, deviceContext, userId: 1 }) // Default ID 1
+                body: JSON.stringify({
+                    smsText: data.smsText,
+                    deviceContext: {
+                        sender: data.sender,
+                        timestamp: data.timestamp,
+                        type: 'SMS_RECEIVED'
+                    },
+                    userId: data.userId
+                })
             });
             if (!res.ok) throw new Error('Analysis failed');
             return await res.json();

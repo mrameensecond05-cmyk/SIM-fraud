@@ -9,8 +9,9 @@ const BASE_URL = `http://${SERVER_IP}:5000/api`;
 
 const DB_CONFIG = {
     host: SERVER_IP,
-    user: process.env.DB_USER || 'simtool',
-    password: process.env.DB_PASSWORD || 'simtool',
+    port: 3307, // Docker Mapped Port
+    user: process.env.DB_USER || 'root', // Docker uses root/rootpassword by default
+    password: process.env.DB_PASSWORD || 'rootpassword', // Updating to match docker-compose defaults
     database: process.env.DB_NAME || 'simfraud_db'
 };
 
