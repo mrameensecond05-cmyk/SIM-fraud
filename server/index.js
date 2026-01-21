@@ -9,27 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const pool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'simfraud_db',
-    // Port 8889 is common for MAMP/MySQL, but default is 3306. 
-    // Using default if not specified.
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-});
-
-// Test Connection
-pool.getConnection()
-    .then(conn => {
-        console.log("Connected to MySQL Database (simfraud_db)!");
-        conn.release();
-    })
-    .catch(err => {
-        console.error("Database Connection Failed:", err.message);
-    });
+const pool = require('./db');
 
 // --- API ROUTES ---
 
