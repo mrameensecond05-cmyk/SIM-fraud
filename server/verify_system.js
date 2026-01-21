@@ -3,7 +3,7 @@ const axios = require('axios');
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
-// Targeting server IP from .env (since localhost failed but DB at 192.168.1.13 worked)
+// Targeting server IP from .env
 const SERVER_IP = process.env.DB_HOST || '192.168.1.13';
 const BASE_URL = `http://${SERVER_IP}:5000/api`;
 
@@ -24,16 +24,39 @@ async function testLogin(email, password, description) {
             console.log("Login Successful: User authenticated");
             if (description.includes("Unregistered")) {
                 console.log("⚠️ CRITICAL FAILURE: Unregistered user was able to login!");
-                console.log("The 'Unregistered User Can Login' issue is VERIFIED (It exists).");
             }
         } else {
             console.log(`Login Response: ${res.status}`);
             if (description.includes("Unregistered") && res.status === 401) {
-                console.log("SUCCESS: Unregistered user blocked (Issue NOT reproduced).");
+                console.log("SUCCESS: Unregistered user blocked.");
             }
         }
     } catch (err) {
-        console.error("Login Test Error:", err.message, err.code);
+        console.error("Login Test Error:", err.message);
+    }
+}
+
+async function testRegistration() {
+    console.log(`\n--- Testing Registration ---`);
+    const uniqueTime = Date.now();
+    const testUser = {
+        name: "Test User",
+        email: `test_${uniqueTime}@example.com`,
+        phone: "1234567890",
+        password: "password123"
+    };
+
+    try {
+        const res = await axios.post(`${BASE_URL}/register`, testUser, { validateStatus: () => true });
+        console.log(`Status: ${res.status}`);
+        if (res.status === 201) {
+            console.log("Registration: SUCCESS - User Created");
+        } else {
+            console.log("Registration: FAILED");
+            console.log("Error Response:", JSON.stringify(res.data));
+        }
+    } catch (err) {
+        console.error("Registration Request Error:", err.message);
     }
 }
 
@@ -66,7 +89,6 @@ async function testDatabaseConnection() {
 async function testOllamaViaAPI() {
     console.log(`\n--- Testing Ollama via Backend API ---`);
     try {
-        // Hits the /api/analyze endpoint which calls Ollama internally
         const res = await axios.post(`${BASE_URL}/analyze`, {
             smsText: "Urgent! Your SIM will be blocked. Click here.",
             deviceContext: { imsiMatch: true, simSwapHours: 48, isAadhaarVerified: true },
@@ -82,26 +104,17 @@ async function testOllamaViaAPI() {
             console.log("Response:", JSON.stringify(res.data));
         }
     } catch (err) {
-        console.error("Ollama API Error:", err.message, err.code);
+        console.error("Ollama API Error:", err.message);
     }
 }
 
 async function runTests() {
     console.log(`Targeting Server at: ${BASE_URL}`);
-
-    // 1. Test Database
     await testDatabaseConnection();
-
-    // 2. Test Login (Unregistered) -> Expect FAILURE (401) if secure
+    await testRegistration(); // New Test
     await testLogin('unregistered@example.com', 'wrongpass', 'Unregistered User');
-
-    // 3. Test Login (Registered) -> Expect SUCCESS (200)
     await testLogin('admin@simtinel.com', 'admin123', 'Registered Admin');
-
-    // 4. Test Protected Endpoint (without auth)
     await testProtectedEndpoint('/stats', '/api/stats (No token)');
-
-    // 5. Test Ollama via API
     await testOllamaViaAPI();
 }
 
