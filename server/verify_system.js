@@ -76,7 +76,7 @@ async function testOllamaViaAPI() {
         console.log(`Status: ${res.status}`);
         if (res.status === 200 && res.data.success) {
             console.log("Backend <-> Ollama Connection: SUCCESS");
-            console.log("Risk Level:", (res.data.analysis && res.data.analysis.riskLevel));
+            console.log("Analysis Result:", res.data.analysis);
         } else {
             console.log("Backend <-> Ollama Connection: FAILED");
             console.log("Response:", JSON.stringify(res.data));
