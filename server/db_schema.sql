@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS SIMFraudRole (
 CREATE TABLE IF NOT EXISTS SIMFraudLogin (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(150) UNIQUE,
-    phone_number VARCHAR(20) UNIQUE,
+    phone_number VARCHAR(20) NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     role_id INT NOT NULL,
     last_login DATETIME,
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS SIMFraudUserProfile (
     login_id BIGINT,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
-    phone VARCHAR(20),
+    phone VARCHAR(20) NULL,
     place_address TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (login_id) REFERENCES SIMFraudLogin(id) ON DELETE CASCADE
