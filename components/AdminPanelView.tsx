@@ -65,14 +65,14 @@ export const AdminPanelView: React.FC<Props> = ({ alerts }) => {
             <AreaChart data={performanceData}>
               <defs>
                 <linearGradient id="colorDetections" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1}/>
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1} />
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af'}} />
-              <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af'}} />
-              <Tooltip 
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9ca3af' }} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9ca3af' }} />
+              <Tooltip
                 contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
               />
               <Area type="monotone" dataKey="detections" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorDetections)" />
@@ -87,7 +87,7 @@ export const AdminPanelView: React.FC<Props> = ({ alerts }) => {
           <h3 className="text-lg font-bold text-gray-800">Alert Oversight (Content Masked)</h3>
           <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded">PRIVACY MODE ACTIVE</span>
         </div>
-        
+
         <div className="bg-white rounded-[28px] border border-gray-100 shadow-sm overflow-hidden">
           <table className="w-full text-left">
             <thead>
@@ -107,10 +107,9 @@ export const AdminPanelView: React.FC<Props> = ({ alerts }) => {
                     <div className="text-[10px] text-gray-400">{alert.timestamp}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${
-                      alert.riskLevel === RiskLevel.CRITICAL ? 'bg-red-50 text-red-600' :
-                      alert.riskLevel === RiskLevel.HIGH ? 'bg-orange-50 text-orange-600' : 'bg-yellow-50 text-yellow-600'
-                    }`}>
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${alert.riskLevel === RiskLevel.CRITICAL ? 'bg-red-50 text-red-600' :
+                        alert.riskLevel === RiskLevel.HIGH ? 'bg-orange-50 text-orange-600' : 'bg-yellow-50 text-yellow-600'
+                      }`}>
                       {alert.riskLevel}
                     </span>
                   </td>
@@ -131,15 +130,24 @@ export const AdminPanelView: React.FC<Props> = ({ alerts }) => {
       </section>
 
       {/* Admin Quick Controls */}
-      <section className="grid grid-cols-2 gap-4">
+      <section className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <button className="bg-[#1c1b1f] text-white p-6 rounded-[28px] flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform shadow-xl">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
           <span className="text-sm font-bold">Retrain AI Model</span>
         </button>
         <button className="bg-white border-2 border-red-100 text-red-600 p-6 rounded-[28px] flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
           <span className="text-sm font-bold">Emergency Kill-Switch</span>
         </button>
+        {/* APK Download Button */}
+        <a
+          href="/api/download/app-debug.apk"
+          download
+          className="bg-blue-50 border-2 border-blue-100 text-blue-600 p-6 rounded-[28px] flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-blue-100"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+          <span className="text-sm font-bold">Download APK</span>
+        </a>
       </section>
     </div>
   );

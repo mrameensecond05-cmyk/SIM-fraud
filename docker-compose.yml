@@ -22,6 +22,8 @@ services:
     depends_on:
       - db
       - ollama
+    volumes:
+      - ./server/public:/app/public
     restart: always
 
   ollama:

@@ -11,7 +11,10 @@ app.use(express.json());
 
 const pool = require('./db');
 
+const path = require('path');
+
 // --- API ROUTES ---
+app.use('/api/download', express.static(path.join(__dirname, 'public')));
 
 // --- AUTH ROUTES ---
 
