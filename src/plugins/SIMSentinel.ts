@@ -12,6 +12,12 @@ export interface SIMSentinelPlugin {
      */
     getIdentifiers(): Promise<{ imei: string; type: 'IMEI' | 'ANDROID_ID' }>;
 
+    /**
+     * Checks for any SMS messages that were received while the app was backgrounded/killed.
+     * Fires 'smsReceived' events for each.
+     */
+    checkForPendingSMS(): Promise<void>;
+
     addListener(eventName: 'smsReceived', listenerFunc: (data: { sender: string; message: string; timestamp: number }) => void): Promise<PluginListenerHandle> & PluginListenerHandle;
 }
 
@@ -24,6 +30,10 @@ const SIMSentinel = registerPlugin<SIMSentinelPlugin>('SIMSentinel', {
         getIdentifiers: async () => {
             console.log('SIMSentinel: Web environment detected, returning mock ID.');
             return { imei: 'WEB-MOCK-ID-12345', type: 'ANDROID_ID' };
+        },
+        checkForPendingSMS: async () => {
+            console.log('SIMSentinel: Web - checking for pending SMS (Mock: None)');
+            return;
         },
         addListener: async (eventName, listenerFunc) => {
             console.log(`SIMSentinel: Web listener added for ${eventName}`);

@@ -14,7 +14,17 @@ const pool = require('./db');
 const path = require('path');
 
 // --- API ROUTES ---
+// --- API ROUTES ---
 app.use('/api/download', express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public/web')));
+
+// Catch-all for React (must be last or after APIs)
+app.get(new RegExp('.*'), (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+        return next();
+    }
+    res.sendFile(path.join(__dirname, 'public/web', 'index.html'));
+});
 
 // --- AUTH ROUTES ---
 
@@ -30,6 +40,7 @@ async function seedRoles() {
     } catch (err) {
         console.error("Role Seeding Error:", err);
     }
+    await seedAdmin(); // Always check/seed admin
 }
 
 async function seedAdmin() {
@@ -163,6 +174,51 @@ app.post('/api/login', async (req, res) => {
     } catch (err) {
         console.error("Login Error:", err);
         res.status(500).json({ error: "Login failed." });
+    }
+});
+
+// Device Registration / SIM Context Endpoint
+app.post('/api/user/device', async (req, res) => {
+    const { userId, imei, location } = req.body;
+
+    if (!userId || !imei) {
+        return res.status(400).json({ error: "User ID and IMEI required." });
+    }
+
+    try {
+        // 1. Get last known SIM Event for this user
+        const [rows] = await pool.query(`
+            SELECT new_imei 
+            FROM SIMFraudSIMEvent 
+            WHERE user_id = ? 
+            ORDER BY timestamp DESC LIMIT 1
+        `, [userId]);
+
+        const lastImei = rows[0]?.new_imei;
+        let eventType = 'new_sim';
+
+        if (lastImei) {
+            if (lastImei !== imei) {
+                eventType = 'imei_change'; // Potentially a SIM swap or device change
+                console.warn(`[SIM SWAP DETECTED] User ${userId} changed IMEI from ${lastImei} to ${imei}`);
+            } else {
+                // Same IMEI, no new event needed unless we track periodic heartbeats. 
+                // For now, let's just update the timestamp or return success.
+                return res.json({ success: true, message: "Device verified", status: "unchanged" });
+            }
+        }
+
+        // 2. Insert new event
+        await pool.query(`
+            INSERT INTO SIMFraudSIMEvent (user_id, event_type, old_imei, new_imei, location, timestamp)
+            VALUES (?, ?, ?, ?, ?, NOW())
+        `, [userId, eventType, lastImei || null, imei, location || 'Unknown']);
+
+        res.json({ success: true, message: "Device registered", status: eventType });
+
+    } catch (err) {
+        console.error("Device Reg Error:", err);
+        res.status(500).json({ error: "Failed to register device." });
     }
 });
 
@@ -431,5 +487,5 @@ app.post('/api/analyze', async (req, res) => {
     }
 });
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

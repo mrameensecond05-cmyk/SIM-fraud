@@ -62,19 +62,70 @@ public class SIMSentinelPlugin extends Plugin {
     }
 
     private static SIMSentinelPlugin instance;
+    private static final String PREFS_NAME = "SIMSentinelPrefs";
+    private static final String KEY_PENDING_SMS = "pending_sms";
 
     public void load() {
         instance = this;
     }
 
-    public static void onSmsReceived(String sender, String message, long timestamp) {
+    public static void onSmsReceived(Context context, String sender, String message, long timestamp) {
         if (instance != null) {
             JSObject ret = new JSObject();
             ret.put("sender", sender);
             ret.put("message", message);
             ret.put("timestamp", timestamp);
             instance.notifyListeners("smsReceived", ret);
+        } else {
+            // Background Queueing
+            savePendingSms(context, sender, message, timestamp);
         }
+    }
+
+    private static void savePendingSms(Context context, String sender, String message, long timestamp) {
+        try {
+            android.content.SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            // Simple JSON array storage
+            org.json.JSONArray queue = new org.json.JSONArray(prefs.getString(KEY_PENDING_SMS, "[]"));
+
+            org.json.JSONObject sms = new org.json.JSONObject();
+            sms.put("sender", sender);
+            sms.put("message", message);
+            sms.put("timestamp", timestamp);
+
+            queue.put(sms);
+
+            prefs.edit().putString(KEY_PENDING_SMS, queue.toString()).apply();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @PluginMethod
+    public void checkForPendingSMS(PluginCall call) {
+        Context context = getContext();
+        android.content.SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String jsonStr = prefs.getString(KEY_PENDING_SMS, "[]");
+
+        try {
+            org.json.JSONArray queue = new org.json.JSONArray(jsonStr);
+            if (queue.length() > 0) {
+                for (int i = 0; i < queue.length(); i++) {
+                    org.json.JSONObject sms = queue.getJSONObject(i);
+                    JSObject ret = new JSObject();
+                    ret.put("sender", sms.getString("sender"));
+                    ret.put("message", sms.getString("message"));
+                    ret.put("timestamp", sms.getLong("timestamp"));
+                    notifyListeners("smsReceived", ret);
+                }
+                // Clear queue
+                prefs.edit().remove(KEY_PENDING_SMS).apply();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        call.resolve();
     }
 
     @SuppressLint({ "HardwareIds", "MissingPermission" })

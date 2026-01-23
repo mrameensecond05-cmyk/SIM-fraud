@@ -9,7 +9,7 @@ const axios = require('axios');
 const pool = require('./db');
 
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434/api/generate';
-const MODEL_NAME = 'mistral'; // Using 'mistral' or 'llama3.2' as available
+const MODEL_NAME = 'tinyllama'; // Using 'mistral' or 'llama3.2' as available
 
 /**
  * Analyzes a specific transaction for fraud using Ollama with full context.

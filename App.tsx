@@ -42,7 +42,13 @@ const App: React.FC = () => {
         try {
           const ids = await SIMSentinel.getIdentifiers();
           console.log("Device ID:", ids);
-          // TODO: Store this ID or use it for registration if needed
+          if (auth.user?.id) {
+            await UserService.registerDevice({
+              userId: auth.user.id,
+              imei: ids.imei
+            });
+            console.log("Device registered for SIM Swap monitoring");
+          }
         } catch (e) {
           console.warn("Could not get identifiers:", e);
         }
@@ -60,44 +66,11 @@ const App: React.FC = () => {
     // Optionally show a warning that features won't work
   };
 
-  // 1. Setup SMS Listener
-  useEffect(() => {
-    let listener: any;
-    const setupListener = async () => {
-      listener = await SIMSentinel.addListener('smsReceived', async (sms) => {
-        console.log("New SMS Received:", sms);
-
-        // Only process if user is logged in
-        if (auth.user) {
-          // Send to backend for analysis
-          try {
-            const result = await UserService.analyzeSms({
-              smsText: sms.message,
-              sender: sms.sender,
-              timestamp: sms.timestamp,
-              userId: auth.user.id
-            });
-
-            // If high risk, maybe show a local alert immediately?
-            if (result.analysis.risk_level === 'HIGH' || result.analysis.risk_level === 'CRITICAL') {
-              alert(`WARNING: High Risk SMS Detected!\n${result.analysis.summary}`);
-            }
-
-            // Refresh alerts
-            const newAlerts = await UserService.getAlerts();
-            setAlerts(newAlerts);
-          } catch (e) {
-            console.error("Analysis Error:", e);
-          }
-        }
-      });
-    };
-    setupListener();
-
-    return () => {
-      if (listener) listener.remove();
-    };
-  }, [auth.user]);
+  const [auth, setAuth] = useState<AuthState>({
+    isAuthenticated: false,
+    view: 'LOGIN',
+    user: undefined
+  });
 
   // Fetch real alerts from backend
   useEffect(() => {
@@ -106,11 +79,7 @@ const App: React.FC = () => {
       .catch(err => console.error("Failed to fetch alerts:", err));
   }, []);
 
-  const [auth, setAuth] = useState<AuthState>({
-    isAuthenticated: false,
-    view: 'LOGIN',
-    user: undefined
-  });
+
 
   // 1. Setup SMS Listener
   useEffect(() => {
@@ -150,6 +119,9 @@ const App: React.FC = () => {
     };
     setupListener();
 
+    // Check for any background SMS that was queued
+    SIMSentinel.checkForPendingSMS().catch(console.warn);
+
     return () => {
       if (listener) listener.remove();
     };
@@ -157,11 +129,13 @@ const App: React.FC = () => {
 
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    setSuccessMsg(null);
     setLoading(true);
 
     try {
@@ -191,8 +165,8 @@ const App: React.FC = () => {
           password: formData.password
         });
 
-        // Auto login or switch to login view
-        alert("Registration Successful! Please login.");
+        // Switch to login view with success message
+        setSuccessMsg("Registration Successful! Please login.");
         setAuth({ ...auth, view: 'LOGIN' });
       }
     } catch (err: any) {
@@ -229,13 +203,13 @@ const App: React.FC = () => {
           <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 space-y-6">
             <div className="flex justify-center gap-8 mb-2">
               <button
-                onClick={() => setAuth({ ...auth, view: 'LOGIN' })}
+                onClick={() => { setAuth({ ...auth, view: 'LOGIN' }); setErrorMsg(null); setSuccessMsg(null); }}
                 className={`text-sm font-bold uppercase tracking-widest pb-2 border-b-2 transition-all ${auth.view === 'LOGIN' ? 'border-[#6750a4] text-[#1d1b20]' : 'border-transparent text-gray-400'}`}
               >
                 Login
               </button>
               <button
-                onClick={() => setAuth({ ...auth, view: 'REGISTER' })}
+                onClick={() => { setAuth({ ...auth, view: 'REGISTER' }); setErrorMsg(null); setSuccessMsg(null); }}
                 className={`text-sm font-bold uppercase tracking-widest pb-2 border-b-2 transition-all ${auth.view === 'REGISTER' ? 'border-[#6750a4] text-[#1d1b20]' : 'border-transparent text-gray-400'}`}
               >
                 Register
@@ -243,8 +217,13 @@ const App: React.FC = () => {
             </div>
 
             <form onSubmit={handleAuthSubmit} className="space-y-4">
+              {successMsg && (
+                <div className="p-3 bg-green-100 text-green-700 rounded-xl text-sm font-medium text-center animate-in fade-in slide-in-from-top-2">
+                  {successMsg}
+                </div>
+              )}
               {errorMsg && (
-                <div className="p-3 bg-red-100 text-red-700 rounded-xl text-sm font-medium text-center">
+                <div className="p-3 bg-red-100 text-red-700 rounded-xl text-sm font-medium text-center animate-in fade-in slide-in-from-top-2">
                   {errorMsg}
                 </div>
               )}
@@ -274,10 +253,21 @@ const App: React.FC = () => {
                 value={formData.password}
                 onChange={e => setFormData({ ...formData, password: e.target.value })}
               />
-              <button className="w-full py-4 bg-[#6750a4] text-white rounded-full font-bold shadow-lg shadow-indigo-100 active:scale-95 transition-transform mt-4">
-                {auth.view === 'LOGIN' ? 'Secure Login' : 'Create Account'}
+              <button disabled={loading} className="w-full py-4 bg-[#6750a4] text-white rounded-full font-bold shadow-lg shadow-indigo-100 active:scale-95 transition-transform mt-4 disabled:opacity-70">
+                {loading ? 'Processing...' : (auth.view === 'LOGIN' ? 'Secure Login' : 'Create Account')}
               </button>
             </form>
+
+            <div className="pt-2 flex justify-center border-t border-gray-100">
+              <a
+                href="/api/download/app-release.apk"
+                download
+                className="flex items-center gap-2 text-sm font-semibold text-[#6750a4] hover:underline"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                Download Android App
+              </a>
+            </div>
           </div>
         </div>
       </div>

@@ -85,5 +85,22 @@ export const UserService = {
             console.error("UserService analyzeSms error:", error);
             throw error;
         }
+    },
+
+    // Register Device (SIM Context)
+    registerDevice: async (data: { userId: string, imei: string }) => {
+        try {
+            const res = await fetch(`${API_URL}/user/device`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (!res.ok) throw new Error('Device registration failed');
+            return await res.json();
+        } catch (error) {
+            console.error("Device verification error:", error);
+            // Non-blocking error, just warn
+            return { success: false };
+        }
     }
 };

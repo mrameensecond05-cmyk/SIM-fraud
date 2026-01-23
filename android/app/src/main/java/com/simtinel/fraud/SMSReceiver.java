@@ -23,7 +23,7 @@ public class SMSReceiver extends BroadcastReceiver {
                             long timestamp = smsMessage.getTimestampMillis();
 
                             // Notify the Plugin
-                            SIMSentinelPlugin.onSmsReceived(sender, messageBody, timestamp);
+                            SIMSentinelPlugin.onSmsReceived(context, sender, messageBody, timestamp);
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
