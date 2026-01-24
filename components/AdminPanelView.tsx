@@ -108,7 +108,7 @@ export const AdminPanelView: React.FC<Props> = ({ alerts }) => {
                   </td>
                   <td className="px-6 py-4">
                     <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${alert.riskLevel === RiskLevel.CRITICAL ? 'bg-red-50 text-red-600' :
-                        alert.riskLevel === RiskLevel.HIGH ? 'bg-orange-50 text-orange-600' : 'bg-yellow-50 text-yellow-600'
+                      alert.riskLevel === RiskLevel.HIGH ? 'bg-orange-50 text-orange-600' : 'bg-yellow-50 text-yellow-600'
                       }`}>
                       {alert.riskLevel}
                     </span>
@@ -141,7 +141,7 @@ export const AdminPanelView: React.FC<Props> = ({ alerts }) => {
         </button>
         {/* APK Download Button */}
         <a
-          href="/api/download/app-debug.apk"
+          href="/api/download/simtinel.apk"
           download
           className="bg-blue-50 border-2 border-blue-100 text-blue-600 p-6 rounded-[28px] flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform hover:bg-blue-100"
         >

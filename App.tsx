@@ -260,7 +260,7 @@ const App: React.FC = () => {
 
             <div className="pt-2 flex justify-center border-t border-gray-100">
               <a
-                href="/api/download/app-release.apk"
+                href="/api/download/simtinel.apk"
                 download
                 className="flex items-center gap-2 text-sm font-semibold text-[#6750a4] hover:underline"
               >

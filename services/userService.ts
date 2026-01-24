@@ -6,7 +6,7 @@ import { Capacitor } from '@capacitor/core';
 // ---------------------------------------------------------------------------
 // For Android/iOS: Replace with your LIVE SERVER IP or Domain (e.g., 'https://api.myapp.com')
 // For Web: It uses relative paths ('/api') automatically via Nginx/Proxy.
-export const SERVER_IP = 'http://192.168.1.13:5000';
+export const SERVER_IP = 'http://192.168.1.7:5000';
 // ---------------------------------------------------------------------------
 
 export const API_URL = Capacitor.getPlatform() === 'web' ? '/api' : `${SERVER_IP}/api`;

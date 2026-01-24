@@ -21,8 +21,7 @@ export const ProfileView: React.FC<Props> = ({ user, onAddNumber, onLogout }) =>
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Use local IP for Android compatibility as per UserService
-  // const SERVER_IP = 'http://192.168.1.13:5000'; // Match UserService
-  // const API_URL = `${SERVER_IP}/api`;
+
 
   const handleMobileSubmit = async () => {
     setIsProcessing(true);
