@@ -68,6 +68,13 @@ Open a terminal on the new device and run:
 ```bash
 git clone <YOUR_GIT_REPO_URL>
 cd SIM-fraud
+
+I the Main folder "SIM-Fraud"
+ Open terminal here
+run command   doxker-compose up      --- TO start the server up
+
+To Stop the server Run -- docker-compose down
+
 ```
 
 *(Replace `<YOUR_GIT_REPO_URL>` with your actual Git repository URL)*
