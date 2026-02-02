@@ -16,77 +16,17 @@ interface Props {
 
 export const ProfileView: React.FC<Props> = ({ user, onAddNumber, onLogout }) => {
   const [isAdding, setIsAdding] = useState(false);
-  const [step, setStep] = useState(1); // 1: Mobile, 2: OTP
   const [formData, setFormData] = useState({ phone: '', otp: '' });
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Use local IP for Android compatibility as per UserService
 
 
-  const handleMobileSubmit = async () => {
-    setIsProcessing(true);
-    try {
-      // Call Backend to Send OTP
-      const res = await fetch(`${API_URL}/otp/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: formData.phone })
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        setStep(2);
-      } else {
-        alert("Error sending OTP: " + data.error);
-      }
-    } catch (e) {
-      alert("Failed to connect to server");
-      console.error(e);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleOTPSubmit = async () => {
-    setIsProcessing(true);
-    try {
-      const res = await fetch(`${API_URL}/otp/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: formData.phone, otp: formData.otp })
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        const newSIM: MonitoredNumber = {
-          id: Math.random().toString(36).substr(2, 9),
-          phoneNumber: formData.phone,
-          isVerified: true,
-          isAadhaarVerified: true, // Legacy flag, kept true for UI consistency
-          aadhaarLastFour: 'XXXX', // No longer collecting this
-          carrier: "Verified-Network",
-          status: 'active',
-          simType: 'SECONDARY'
-        };
-
-        onAddNumber(newSIM);
-        resetFlow();
-        alert("Phone Number Verified & Added Successfully!");
-      } else {
-        alert("Invalid OTP: " + data.error);
-      }
-    } catch (e) {
-      alert("Verification failed");
-      console.error(e);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const resetFlow = () => {
     setIsProcessing(false);
     setIsAdding(false);
-    setStep(1);
+    // setStep(1); // Removed step state usage
     setFormData({ phone: '', otp: '' });
   };
 
@@ -195,6 +135,7 @@ export const ProfileView: React.FC<Props> = ({ user, onAddNumber, onLogout }) =>
         </div>
       </section>
 
+
       {/* Add SIM Modal Flow */}
       {isAdding && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm px-0">
@@ -205,75 +146,56 @@ export const ProfileView: React.FC<Props> = ({ user, onAddNumber, onLogout }) =>
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-black text-gray-900 tracking-tight">
-                    {step === 1 ? "Target SIM" : "Verify Ownership"}
+                    Target SIM
                   </h2>
-                  <p className="text-xs text-gray-400 font-medium mt-0.5">Step {step} of 2 • OTP Verification</p>
-                </div>
-                <div className="flex gap-1">
-                  {[1, 2].map(i => (
-                    <div key={i} className={`h-1.5 w-6 rounded-full transition-all duration-300 ${i === step ? 'bg-[#6750a4] w-8' : i < step ? 'bg-green-400' : 'bg-gray-100'}`} />
-                  ))}
+                  <p className="text-xs text-gray-400 font-medium mt-0.5">Enter details to monitor</p>
                 </div>
               </div>
 
-              {step === 1 && (
-                <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                  <p className="text-gray-500 text-sm leading-relaxed">Enter the mobile number you wish to add. We will send a One-Time Password (OTP) to verify ownership.</p>
-                  <div className="bg-gray-50 p-5 rounded-[28px] border-2 border-transparent focus-within:border-[#6750a4] transition-all group">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest group-focus-within:text-[#6750a4]">Mobile Number</label>
-                    <input
-                      type="tel"
-                      placeholder="+91 XXXXX XXXXX"
-                      className="w-full bg-transparent outline-none font-black text-2xl mt-2 tracking-tight"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      autoFocus
-                    />
-                  </div>
-                  <button
-                    disabled={!formData.phone || isProcessing}
-                    onClick={handleMobileSubmit}
-                    className="w-full py-4 bg-[#6750a4] text-white rounded-full font-bold shadow-xl shadow-indigo-100 disabled:opacity-50 active:scale-95 transition-transform flex items-center justify-center gap-3"
-                  >
-                    {isProcessing ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        <span>Sending OTP...</span>
-                      </>
-                    ) : "Send OTP"}
-                  </button>
+              <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                <p className="text-gray-500 text-sm leading-relaxed">Enter the mobile number you wish to add to your monitoring list.</p>
+                <div className="bg-gray-50 p-5 rounded-[28px] border-2 border-transparent focus-within:border-[#6750a4] transition-all group">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest group-focus-within:text-[#6750a4]">Mobile Number</label>
+                  <input
+                    type="tel"
+                    placeholder="+91 XXXXX XXXXX"
+                    className="w-full bg-transparent outline-none font-black text-2xl mt-2 tracking-tight"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    autoFocus
+                  />
                 </div>
-              )}
-
-              {step === 2 && (
-                <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                  <p className="text-gray-500 text-sm leading-relaxed">Enter the 6-digit OTP code sent to {formData.phone}.</p>
-                  <div className="bg-gray-50 p-6 rounded-[28px] border-2 border-transparent focus-within:border-green-500 transition-all">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center block mb-2">Verification Code</label>
-                    <input
-                      type="text"
-                      maxLength={6}
-                      placeholder="000000"
-                      className="w-full bg-transparent outline-none font-black text-4xl text-center tracking-[0.6em] text-gray-900"
-                      value={formData.otp}
-                      onChange={(e) => setFormData({ ...formData, otp: e.target.value })}
-                      autoFocus
-                    />
-                  </div>
-                  <button
-                    disabled={formData.otp.length !== 6 || isProcessing}
-                    onClick={handleOTPSubmit}
-                    className="w-full py-4 bg-green-600 text-white rounded-full font-bold shadow-xl shadow-green-100 disabled:opacity-50 flex items-center justify-center gap-3"
-                  >
-                    {isProcessing ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        <span>Verifying...</span>
-                      </>
-                    ) : "Verify & Add Number"}
-                  </button>
-                </div>
-              )}
+                <button
+                  disabled={!formData.phone || isProcessing}
+                  onClick={async () => {
+                    setIsProcessing(true);
+                    // Simulating API delay or direct addition
+                    setTimeout(() => {
+                      const newSIM: MonitoredNumber = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        phoneNumber: formData.phone,
+                        isVerified: true, // Auto-verified since check is removed
+                        isAadhaarVerified: false,
+                        aadhaarLastFour: 'XXXX',
+                        carrier: "Unknown Network", // Could be fetched in future
+                        status: 'active',
+                        simType: 'SECONDARY'
+                      };
+                      onAddNumber(newSIM);
+                      resetFlow();
+                      setIsProcessing(false);
+                    }, 500);
+                  }}
+                  className="w-full py-4 bg-[#6750a4] text-white rounded-full font-bold shadow-xl shadow-indigo-100 disabled:opacity-50 active:scale-95 transition-transform flex items-center justify-center gap-3"
+                >
+                  {isProcessing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <span>Adding...</span>
+                    </>
+                  ) : "Add Number"}
+                </button>
+              </div>
 
               <button
                 onClick={resetFlow}

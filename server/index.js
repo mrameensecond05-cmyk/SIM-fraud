@@ -228,62 +228,8 @@ app.post('/api/user/device', async (req, res) => {
     }
 });
 
-// --- OTP ROUTES ---
 
-// Send OTP
-app.post('/api/otp/send', async (req, res) => {
-    const { phone } = req.body;
-    if (!phone) return res.status(400).json({ error: "Phone number required" });
-
-    try {
-        // Generate 6-digit OTP
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-        // Save to DB with 5 min expiry
-        await pool.query(`
-            INSERT INTO SIMFraudOTP (phone_number, otp_code, expires_at)
-            VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 5 MINUTE))
-        `, [phone, otp]);
-
-        // Mock SMS Sending
-        console.log(`[MOCK SMS] OTP for ${phone} is: ${otp}`);
-
-        res.json({ success: true, message: "OTP sent successfully" });
-    } catch (err) {
-        console.error("OTP Send Error:", err);
-        res.status(500).json({ error: "Failed to send OTP" });
-    }
-});
-
-// Verify OTP
-app.post('/api/otp/verify', async (req, res) => {
-    const { phone, otp } = req.body;
-    if (!phone || !otp) return res.status(400).json({ error: "Phone and OTP required" });
-
-    try {
-        // Check for valid, non-expired, matching OTP
-        const [rows] = await pool.query(`
-            SELECT id FROM SIMFraudOTP 
-            WHERE phone_number = ? 
-            AND otp_code = ? 
-            AND expires_at > NOW()
-            AND is_verified = FALSE
-            ORDER BY created_at DESC LIMIT 1
-        `, [phone, otp]);
-
-        if (rows.length === 0) {
-            return res.status(400).json({ error: "Invalid or expired OTP" });
-        }
-
-        // Mark as verified
-        await pool.query('UPDATE SIMFraudOTP SET is_verified = TRUE WHERE id = ?', [rows[0].id]);
-
-        res.json({ success: true, message: "Phone number verified" });
-    } catch (err) {
-        console.error("OTP Verify Error:", err);
-        res.status(500).json({ error: "Verification failed" });
-    }
-});
+// --- OTP ROUTES REMOVED ---
 
 // Get Stats for Dashboard
 app.get('/api/stats', async (req, res) => {

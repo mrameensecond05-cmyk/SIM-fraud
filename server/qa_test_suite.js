@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const BASE_URL = 'http://192.168.1.13'; // Target Remote
+const BASE_URL = 'http://192.168.1.8'; // Target Remote
 // const BASE_URL = 'http://localhost:5000'; 
 
 async function runQASuite() {
@@ -106,6 +106,20 @@ async function runQASuite() {
         }
     } catch (err) {
         console.error('❌ Stats Error:', err.message);
+    }
+
+    // 6. Alerts API
+    try {
+        console.log('\n--- Testing Alerts API ---');
+        const res = await axios.get(`${BASE_URL}/api/alerts`);
+        if (res.status === 200 && Array.isArray(res.data)) {
+            console.log('✅ Alerts Endpoint Passed');
+            results.alerts = true;
+        } else {
+            console.error('❌ Alerts Failed:', res.data);
+        }
+    } catch (err) {
+        console.error('❌ Alerts Error:', err.message);
     }
 
     // Summary
