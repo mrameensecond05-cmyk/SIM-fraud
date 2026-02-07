@@ -77,15 +77,18 @@ def update_file(filepath, new_ip):
              updated_content, n = re.subn(pattern, replacer, content)
              changes += n
 
-        if changes > 0:
+        if updated_content != content:
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(updated_content)
             print(f"✅ Updated {filepath} (replaced {changes} instance(s) with {new_ip})")
+            return True
         else:
             print(f"ℹ️  No matching pattern found in {filepath} or IP already set.")
+            return False
 
     except Exception as e:
         print(f"❌ Failed to update {filepath}: {e}")
+        return False
 
 def main():
     print("🔄 Network Auto-Configuration Tool")
@@ -93,7 +96,7 @@ def main():
     new_ip = get_local_ip()
     if not new_ip:
         print("❌ Could not determine local IP. Exiting.")
-        return
+        sys.exit(1)
 
     print(f"📍 Detected Local IP: {new_ip}")
     
@@ -109,14 +112,21 @@ def main():
     base_dir = os.getcwd()
     print(f"📂 Scanning files in: {base_dir}")
 
+    any_updates = False
     for rel_path in files_to_check:
         full_path = os.path.join(base_dir, rel_path)
-        update_file(full_path, new_ip)
+        if update_file(full_path, new_ip):
+            any_updates = True
 
     print("\n✅ Configuration update complete.")
-    print("⚠️  Remember to rebuild your Android app if you updated the XML config:")
-    print("   npx cap copy android")
-    print("   npx cap open android")
+    
+    if any_updates:
+        print("⚠️  Changes detected. Triggering rebuild...")
+        sys.exit(100)
+    else:
+        print("✅ No changes needed. Skipping rebuild.")
+        sys.exit(0)
 
 if __name__ == "__main__":
+    import sys
     main()
