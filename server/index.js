@@ -4,6 +4,7 @@ const cors = require('cors');
 const { analyzeWithOllama } = require('./aiService');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
+const { sendSimulatedSMS } = require('./smsService');
 
 const app = express();
 app.use(cors());
@@ -123,6 +124,19 @@ app.post('/api/register', async (req, res) => {
         `, [loginId, name, email, phone || null]);
 
         await conn.commit();
+
+        // --- SIMULATED SMS FLOW (Async, non-blocking) ---
+        // We don't await these to keep registration fast, or we can await if we want to ensure order strictly.
+        // For simulation visibility, we'll await them.
+        try {
+            if (phone) {
+                await sendSimulatedSMS(phone, `Welcome ${name}! SIMFraud account created.`);
+                await sendSimulatedSMS(phone, `OTP: 123456 (for testing)`);
+                await sendSimulatedSMS(phone, `SIM swap request received. Reply STOP if not you.`);
+            }
+        } catch (smsErr) {
+            console.error("Simulation SMS Error:", smsErr);
+        }
 
         res.status(201).json({ message: "Registration successful", success: true });
 
@@ -435,6 +449,106 @@ app.post('/api/analyze', async (req, res) => {
 
     } catch (err) {
         console.error("Analysis Endpoint Error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- SIMULATION ENDPOINTS ---
+
+/**
+ * Trigger a simulated Fraud Alert flow.
+ * 1. Simulates an IMEI change (SIM Swap).
+ * 2. Simulates a Transaction.
+ * 3. Triggers AI Analysis.
+ * 4. Sends Alert SMS.
+ */
+app.post('/api/simulate/alert', async (req, res) => {
+    const { phone, userId } = req.body;
+
+    if (!userId && !phone) {
+        return res.status(400).json({ error: "UserId or Phone required" });
+    }
+
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        // 1. Resolve User
+        let targetUserId = userId;
+        let targetPhone = phone;
+        let targetName = 'Unknown';
+
+        if (!targetUserId) {
+            const [users] = await conn.query("SELECT id, name FROM SIMFraudUserProfile WHERE phone = ?", [phone]);
+            if (users.length === 0) {
+                await conn.rollback();
+                return res.status(404).json({ error: "User not found with that phone" });
+            }
+            targetUserId = users[0].id;
+            targetName = users[0].name;
+        } else {
+            const [users] = await conn.query("SELECT phone, name FROM SIMFraudUserProfile WHERE id = ?", [targetUserId]);
+            if (users.length > 0) {
+                targetPhone = users[0].phone;
+                targetName = users[0].name;
+            }
+        }
+
+        console.log(`[SIMULATION] Starting Fraud Scenario for User ${targetUserId} (${targetName})`);
+
+        // 2. Simulate SIM Swap (IMEI Change)
+        // We look for the last event and just change the IMEI
+        const [lastEvent] = await conn.query("SELECT new_imei FROM SIMFraudSIMEvent WHERE user_id = ? ORDER BY timestamp DESC LIMIT 1", [targetUserId]);
+        const oldImei = lastEvent[0]?.new_imei || '111111111111111';
+        const newImei = '999999999999999'; // Simulated Attacker IMEI
+
+        await conn.query(`
+            INSERT INTO SIMFraudSIMEvent (user_id, event_type, old_imei, new_imei, location, timestamp)
+            VALUES (?, 'imei_change', ?, ?, 'Unknown (Simulated)', NOW())
+        `, [targetUserId, oldImei, newImei]);
+
+        console.log(`[SIMULATION] Step 1: SIM Swap Event Created`);
+
+        // 3. Simulate Suspicious Transaction
+        const [txRes] = await conn.query(`
+            INSERT INTO SIMFraudTransaction (user_id, amount, channel, status, timestamp)
+            VALUES (?, 50000.00, 'ONLINE', 'initiated', NOW())
+        `, [targetUserId]);
+        const txId = txRes.insertId;
+
+        console.log(`[SIMULATION] Step 2: Transaction Created (ID: ${txId})`);
+
+        await conn.commit(); // Commit data so AI service can read it
+        conn.release(); // Release early
+
+        // 4. Trigger AI Analysis
+        // We use the imported analyzeFraud function directly
+        const { analyzeFraud } = require('./aiService');
+        const analysis = await analyzeFraud(txId);
+
+        console.log(`[SIMULATION] Step 3: AI Analysis Complete (Risk: ${analysis.risk_level})`);
+
+        // 5. Send Alert SMS
+        if (targetPhone) {
+            const alertMsg = `ALERT: SIM swap detected for ${targetPhone}. A transaction of Rs.50000 was attempted. Reply STOP to block.`;
+            await sendSimulatedSMS(targetPhone, alertMsg);
+        }
+
+        res.json({
+            success: true,
+            message: "Simulation Complete",
+            steps: [
+                "SIM Swap Event Created",
+                "Suspicious Transaction Created",
+                "AI Analysis Performed",
+                "Alert SMS Sent"
+            ],
+            analysis: analysis
+        });
+
+    } catch (err) {
+        if (conn) conn.release();
+        console.error("Simulation Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
