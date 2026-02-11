@@ -4,7 +4,7 @@ const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 // Targeting server IP from .env
-const SERVER_IP = process.env.DB_HOST || '192.168.1.8';
+const SERVER_IP = process.env.DB_HOST || '192.168.0.125';
 const BASE_URL = `http://${SERVER_IP}:5000/api`;
 
 const DB_CONFIG = {

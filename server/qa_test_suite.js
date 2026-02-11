@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const BASE_URL = 'http://192.168.1.8'; // Target Remote
+const BASE_URL = 'http://192.168.0.125'; // Target Remote
 // const BASE_URL = 'http://localhost:5000'; 
 
 async function runQASuite() {

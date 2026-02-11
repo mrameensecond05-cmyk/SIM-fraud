@@ -1,7 +1,7 @@
 const axios = require('axios');
 const pool = require('./db');
 
-const BASE_URL = 'http://192.168.1.8:5000/api';
+const BASE_URL = 'http://192.168.0.125:5000/api';
 
 async function testSimSwap() {
     console.log("=== SIM SWAP TEST ===");
