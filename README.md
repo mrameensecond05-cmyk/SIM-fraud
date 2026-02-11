@@ -215,5 +215,49 @@ Now that the IP address in the code (`userService.ts`) points to your new server
     Try to **Register** or **Login**.
     
     *If it works, the app successfully connected to your backend at `192.168.1.50`!*
+Network Auto-Configuration & Build Automation
+This guide explains the automated network configuration and Android build process powered by update_network_ip.py.
+
+What it Does
+When you run the start script, the system automatically:
+
+Detects your local IP address (compatible with Windows, Linux, and macOS).
+Updates IP addresses in the following configuration files:
+services/userService.ts
+vite.config.ts
+android/app/src/main/res/xml/network_security_config.xml
+server/qa_test_suite.js
+server/verify_system.js
+server/test_sim_swap.js
+Rebuilds the Android App (only if an IP change is detected):
+Runs npm run build (Vite build)
+Runs npx cap sync (Capacitor sync)
+Runs gradlew assembleDebug (Android APK build)
+🚀 How to Run
+To start the system with automatic network configuration and Docker deployment, simply run the wrapper script for your OS.
+
+🐧 For Linux / Mac
+Open your terminal and run:
+
+./run.sh
+🪟 For Windows
+Open Command Prompt or PowerShell and run:
+
+run.bat
+These scripts will:
+
+Run update_network_ip.py to check and update IPs.
+If IPs changed, automatically rebuild the Android app.
+Start the backend services using docker-compose up -d --build.
+✅ Verification
+After the script finishes, you can verify the update:
+
+Check IP: The terminal output will show the detected IP (matching your machine's LAN IP).
+Check Files: Open any of the files listed above to ensure they contain the new IP.
+Check APK: A new APK will be generated at:
+android/app/build/outputs/apk/debug/app-debug.apk
+It is also copied to server/public/simtinel.apk for easy download.    
+
+    
 
 
