@@ -27,6 +27,21 @@ services:
       - ./server/public:/app/public
     restart: always
 
+  simulation:
+    build: ./server
+    command: sh -c "npm run seed && npm run simulate"
+    environment:
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=rootpassword
+      - DB_NAME=simfraud_db
+    depends_on:
+      backend:
+        condition: service_started
+      db:
+        condition: service_healthy
+    restart: always
+
   ollama:
     image: ollama/ollama:latest
     ports:

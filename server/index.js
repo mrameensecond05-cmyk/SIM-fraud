@@ -4,7 +4,7 @@ const cors = require('cors');
 const { analyzeWithOllama } = require('./aiService');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
-const { sendSimulatedSMS } = require('./smsService');
+const { sendSimulatedSMS, getRemainingQuota } = require('./smsService');
 
 const app = express();
 app.use(cors());
@@ -125,14 +125,10 @@ app.post('/api/register', async (req, res) => {
 
         await conn.commit();
 
-        // --- SIMULATED SMS FLOW (Async, non-blocking) ---
-        // We don't await these to keep registration fast, or we can await if we want to ensure order strictly.
-        // For simulation visibility, we'll await them.
+        // --- SIMULATED SMS FLOW (Single SMS to conserve quota) ---
         try {
             if (phone) {
-                await sendSimulatedSMS(phone, `Welcome ${name}! SIMFraud account created.`);
-                await sendSimulatedSMS(phone, `OTP: 123456 (for testing)`);
-                await sendSimulatedSMS(phone, `SIM swap request received. Reply STOP if not you.`);
+                await sendSimulatedSMS(phone, `Welcome ${name}! Your SIMTinel account is active. OTP: 123456. Stay protected.`);
             }
         } catch (smsErr) {
             console.error("Simulation SMS Error:", smsErr);
@@ -143,6 +139,7 @@ app.post('/api/register', async (req, res) => {
     } catch (err) {
         await conn.rollback();
         console.error("Register Error:", err);
+        require('fs').appendFileSync('error.log', `Register Error: ${err.stack}\n`);
         res.status(500).json({ error: "Registration failed. Please try again." });
     } finally {
         conn.release();
@@ -152,12 +149,15 @@ app.post('/api/register', async (req, res) => {
 // Login Endpoint
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
+    console.log("LOGIN API CALLED. Body:", req.body);
 
     if (!email || !password) {
+        console.log("Missing credentials");
         return res.status(400).json({ error: "Email and password required." });
     }
 
     try {
+        console.log("Searching for user:", email);
         // 1. Find User by Email
         const [users] = await pool.query(`
             SELECT l.id as login_id, l.password_hash, l.role_id, r.role_name, p.name, p.id as profile_id
@@ -172,14 +172,18 @@ app.post('/api/login', async (req, res) => {
         }
 
         const user = users[0];
+        console.log("User Found:", user.login_id, user.role_name);
 
         // 2. Verify Password
+        console.log("Verifying password...");
         const isMatch = await bcrypt.compare(password, user.password_hash);
+        console.log("Password match result:", isMatch);
         if (!isMatch) {
             return res.status(401).json({ error: "Invalid credentials." });
         }
 
         // 3. Return User Data (No Token for this MVP, just user object)
+        console.log("Login Successful relative to DB. Sending response.");
         res.json({
             success: true,
             user: {
@@ -193,6 +197,11 @@ app.post('/api/login', async (req, res) => {
 
     } catch (err) {
         console.error("Login Error:", err);
+        try {
+            require('fs').appendFileSync('/tmp/simfraud_error.log', `Login Error: ${err.message}\nStack: ${err.stack}\n`);
+        } catch (e) {
+            console.error("Failed to write log:", e);
+        }
         res.status(500).json({ error: "Login failed." });
     }
 });
@@ -463,10 +472,24 @@ app.post('/api/analyze', async (req, res) => {
  * 4. Sends Alert SMS.
  */
 app.post('/api/simulate/alert', async (req, res) => {
-    const { phone, userId } = req.body;
+    let { phone, userId } = req.body;
 
+    // If no phone/userId provided, auto-target the latest registered user
     if (!userId && !phone) {
-        return res.status(400).json({ error: "UserId or Phone required" });
+        try {
+            const [latest] = await pool.query(
+                "SELECT p.id, p.phone, p.name FROM SIMFraudUserProfile p WHERE p.phone IS NOT NULL ORDER BY p.id DESC LIMIT 1"
+            );
+            if (latest.length > 0) {
+                userId = latest[0].id;
+                phone = latest[0].phone;
+                console.log(`[SIMULATION] Auto-targeting latest user: ${latest[0].name} (${phone})`);
+            } else {
+                return res.status(404).json({ error: "No registered users with phone numbers found" });
+            }
+        } catch (err) {
+            return res.status(500).json({ error: "Failed to find latest user" });
+        }
     }
 
     const conn = await pool.getConnection();
@@ -512,7 +535,7 @@ app.post('/api/simulate/alert', async (req, res) => {
         // 3. Simulate Suspicious Transaction
         const [txRes] = await conn.query(`
             INSERT INTO SIMFraudTransaction (user_id, amount, channel, status, timestamp)
-            VALUES (?, 50000.00, 'ONLINE', 'initiated', NOW())
+            VALUES (?, 50000.00, 'NETBANKING', 'initiated', NOW())
         `, [targetUserId]);
         const txId = txRes.insertId;
 
@@ -528,9 +551,21 @@ app.post('/api/simulate/alert', async (req, res) => {
 
         console.log(`[SIMULATION] Step 3: AI Analysis Complete (Risk: ${analysis.risk_level})`);
 
-        // 5. Send Alert SMS
+        // 5. Send Alert SMS (Random from pool of realistic messages)
         if (targetPhone) {
-            const alertMsg = `ALERT: SIM swap detected for ${targetPhone}. A transaction of Rs.50000 was attempted. Reply STOP to block.`;
+            const alertMessages = [
+                `ALERT: SIM swap detected on ${targetPhone}. Rs.50,000 transaction blocked. Call 1800-SIMTINEL if not you.`,
+                `SIMTinel: Unusual login from new device IMEI:999999. Your account is temporarily locked for safety.`,
+                `WARNING: Your SIM card was changed. A Rs.50,000 transfer was attempted. Reply STOP to block.`,
+                `FRAUD ALERT: Suspicious activity on your account. New device detected. Contact support immediately.`,
+                `SIMTinel Security: SIM swap attempt detected. Transaction of Rs.50,000 has been held for verification.`,
+                `URGENT: Your number ${targetPhone} was ported to a new SIM. All transactions are paused. Call support.`,
+                `SIMTinel: High-risk transaction blocked. New IMEI detected on your account. Verify identity to proceed.`,
+                `ALERT: Identity mismatch detected. A device change + Rs.50,000 transfer flagged as suspicious.`,
+                `SIMTinel Fraud Shield: SIM change + large transaction detected. Account frozen pending review.`,
+                `SECURITY: Your SIM was swapped. Unauthorized Rs.50,000 NETBANKING attempt blocked by SIMTinel AI.`
+            ];
+            const alertMsg = alertMessages[Math.floor(Math.random() * alertMessages.length)];
             await sendSimulatedSMS(targetPhone, alertMsg);
         }
 
@@ -551,6 +586,11 @@ app.post('/api/simulate/alert', async (req, res) => {
         console.error("Simulation Error:", err);
         res.status(500).json({ error: err.message });
     }
+});
+
+// --- SMS Quota Endpoint ---
+app.get('/api/sms/quota', (req, res) => {
+    res.json({ remaining: getRemainingQuota(), limit: 3 });
 });
 
 const PORT = process.env.PORT || 5000;

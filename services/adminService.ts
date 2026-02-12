@@ -5,6 +5,7 @@ import { API_URL } from './userService'; // Import shared config
 // Local config removed. Uses centralized API_URL from userService.ts.
 
 export const AdminAppService = {
+    API_URL: API_URL, // Expose for direct fetching if needed
     getUsers: async (): Promise<AdminUser[]> => {
         try {
             const res = await fetch(`${API_URL}/users`);
@@ -48,6 +49,20 @@ export const AdminAppService = {
                 threatsBlockedToday: 0,
                 systemHealth: 'Error'
             };
+        }
+    },
+    simulateAlert: async (phone: string, userId?: number) => {
+        try {
+            const res = await fetch(`${API_URL}/simulate/alert`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone, userId })
+            });
+            if (!res.ok) throw new Error('Simulation failed');
+            return await res.json();
+        } catch (error) {
+            console.error('Simulate Alert Error:', error);
+            return { success: false, error: String(error) };
         }
     }
 };
