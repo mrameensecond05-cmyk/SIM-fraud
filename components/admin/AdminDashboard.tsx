@@ -94,10 +94,10 @@ export const AdminDashboard: React.FC = () => {
 };
 
 const SimulateAlertPanel: React.FC = () => {
-    const [phone, setPhone] = useState('');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [quota, setQuota] = useState<number | null>(null);
+    const [countdown, setCountdown] = useState<number | null>(null);
 
     useEffect(() => {
         // Fetch quota on mount
@@ -107,12 +107,29 @@ const SimulateAlertPanel: React.FC = () => {
             .catch(() => setQuota(null));
     }, [result]); // Refresh when result changes (after a simulation)
 
-    const handleSimulate = async () => {
-        // If empty, we allow it for auto-targeting
-        setLoading(true);
+    useEffect(() => {
+        let timer: any;
+        if (countdown !== null && countdown > 0) {
+            timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+        } else if (countdown === 0) {
+            triggerSimulation();
+        }
+        return () => clearTimeout(timer);
+    }, [countdown]);
+
+    const startSimulationFlow = () => {
         setResult(null);
+        setLoading(true);
+        // Random delay between 20 and 59 seconds
+        const randomDelaySeconds = Math.floor(Math.random() * (59 - 20 + 1)) + 20;
+        setCountdown(randomDelaySeconds);
+    };
+
+    const triggerSimulation = async () => {
+        setCountdown(null);
         try {
-            const res = await AdminAppService.simulateAlert(phone); // Empty phone = auto-target
+            // Empty phone = auto-target latest/active user
+            const res = await AdminAppService.simulateAlert('');
             setResult(res);
         } catch (err) {
             setResult({ success: false, error: String(err) });
@@ -123,58 +140,66 @@ const SimulateAlertPanel: React.FC = () => {
     return (
         <div className="bg-gradient-to-br from-[#1d1b20] to-[#2d2b30] text-white p-6 rounded-[24px] shadow-lg relative overflow-hidden">
             <div className="absolute top-0 right-0 w-40 h-40 bg-red-500/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
-            <div className="flex items-center gap-3 mb-4">
-                <div className="bg-red-500/20 p-2 rounded-xl">
-                    <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+            <div className="flex flex-col items-center justify-center text-center gap-4 py-4">
+                <div className="bg-red-500/20 p-4 rounded-full mb-2">
+                    <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                 </div>
+
                 <div>
-                    <h3 className="text-lg font-bold">Simulate Fraud Alert</h3>
-                    <div className="text-xs text-gray-400 flex gap-2">
-                        <span>Triggers SIM swap + transaction + SMS alert</span>
-                        {quota !== null && (
-                            <span className={quota > 0 ? 'text-green-400' : 'text-red-400'}>
-                                • SMS Quota: {quota}/3 left
-                            </span>
-                        )}
-                    </div>
+                    <h3 className="text-xl font-bold">Simulate Live Fraud Event</h3>
+                    <p className="text-gray-400 text-sm mt-1 max-w-md mx-auto">
+                        This will trigger a realistic SIM swap scenario, complete with AI analysis and SMS alert to an active user.
+                    </p>
                 </div>
-            </div>
 
-            <div className="flex gap-3 mb-4">
-                <input
-                    type="tel"
-                    placeholder="Auto-target latest registered user (or enter phone)"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    className="flex-1 bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-red-400/50 focus:ring-1 focus:ring-red-400/30"
-                    maxLength={10}
-                />
-                <button
-                    onClick={handleSimulate}
-                    disabled={loading || (quota === 0 && phone !== 'mock')}
-                    className={`px-6 py-3 rounded-xl font-bold text-sm transition-all ${loading || quota === 0
-                        ? 'bg-gray-600 cursor-not-allowed'
-                        : 'bg-red-500 hover:bg-red-600 active:scale-95 shadow-lg shadow-red-500/30'
-                        }`}
-                >
-                    {loading ? '⏳ Running...' : quota === 0 ? '⛔ Quota limit' : '🚨 Trigger'}
-                </button>
-            </div>
-
-            {result && (
-                <div className={`p-3 rounded-xl text-sm ${result.success ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
-                    {result.success ? (
-                        <div>
-                            <div className="font-bold mb-1">✅ Simulation Complete</div>
-                            <div className="text-xs opacity-80">{result.steps?.join(' → ')}</div>
+                <div className="mt-4 w-full flex flex-col items-center gap-2">
+                    {countdown !== null ? (
+                        <div className="flex flex-col items-center animate-pulse">
+                            <span className="text-4xl font-black text-white font-mono">{countdown}s</span>
+                            <span className="text-sm text-red-300 font-bold uppercase tracking-wider">Injecting Threat...</span>
                         </div>
                     ) : (
-                        <div>❌ {result.error || 'Simulation failed'}</div>
+                        <button
+                            onClick={startSimulationFlow}
+                            disabled={loading || (quota === 0)}
+                            className={`px-8 py-4 rounded-2xl font-bold text-lg transition-all w-full max-w-xs ${loading || quota === 0
+                                    ? 'bg-gray-600 cursor-not-allowed opacity-50'
+                                    : 'bg-red-600 hover:bg-red-500 active:scale-95 shadow-xl shadow-red-600/30'
+                                }`}
+                        >
+                            {loading ? 'Processing...' : quota === 0 ? '⛔ Quota limit' : '🚨 TRIGGER SIMULATION'}
+                        </button>
+                    )}
+
+                    {quota !== null && (
+                        <span className={`text-xs mt-2 ${quota > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            • Daily SMS Quota: {quota}/3 remaining •
+                        </span>
                     )}
                 </div>
-            )}
+
+                {result && (
+                    <div className={`mt-6 p-4 rounded-xl text-sm w-full max-w-md animate-fade-in ${result.success ? 'bg-green-500/10 border border-green-500/30 text-green-300' : 'bg-red-500/10 border border-red-500/30 text-red-300'}`}>
+                        {result.success ? (
+                            <div className="text-left">
+                                <div className="font-bold mb-2 flex items-center gap-2">
+                                    <span className="text-lg">✅</span> Simulation Successful
+                                </div>
+                                <ul className="space-y-1 list-disc list-inside text-xs opacity-90 text-gray-300">
+                                    {result.steps?.map((step: string, i: number) => (
+                                        <li key={i}>{step}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        ) : (
+                            <div>❌ {result.error || 'Simulation failed'}</div>
+                        )}
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
