@@ -13,16 +13,33 @@ export const API_URL = Capacitor.getPlatform() === 'web' ? '/api' : `${SERVER_IP
 
 export const UserService = {
     // Auth - Login
+    // Auth - Login
     login: async (credentials: any) => {
+        console.log(`[Auth Debug] Login Attempt:`, credentials);
+        console.log(`[Auth Debug] Platform: ${Capacitor.getPlatform()}`);
+        console.log(`[Auth Debug] Target URL: ${API_URL}/login`);
+
         try {
             const res = await fetch(`${API_URL}/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(credentials)
             });
+
+            console.log(`[Auth Debug] Response Status: ${res.status}`);
+            const contentType = res.headers.get("content-type");
+            console.log(`[Auth Debug] Content-Type: ${contentType}`);
+
             if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error || 'Login failed');
+                // Try to read text if JSON fails
+                const text = await res.text();
+                console.error(`[Auth Debug] Error Body:`, text);
+                try {
+                    const err = JSON.parse(text);
+                    throw new Error(err.error || 'Login failed');
+                } catch (e) {
+                    throw new Error(`Server Error (${res.status}): ${text.substring(0, 100)}...`);
+                }
             }
             return await res.json();
         } catch (error: any) {
@@ -33,15 +50,27 @@ export const UserService = {
 
     // Auth - Register
     register: async (userData: any) => {
+        console.log(`[Auth Debug] Register Attempt:`, userData);
+        console.log(`[Auth Debug] Target URL: ${API_URL}/register`);
+
         try {
             const res = await fetch(`${API_URL}/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(userData)
             });
+
+            console.log(`[Auth Debug] Response Status: ${res.status}`);
+
             if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error || 'Registration failed');
+                const text = await res.text();
+                console.error(`[Auth Debug] Register Error Body:`, text);
+                try {
+                    const err = JSON.parse(text);
+                    throw new Error(err.error || 'Registration failed');
+                } catch (e) {
+                    throw new Error(`Server Error (${res.status}): ${text.substring(0, 100)}...`);
+                }
             }
             return await res.json();
         } catch (error: any) {
