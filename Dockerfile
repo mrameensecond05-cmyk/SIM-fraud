@@ -1,21 +1,28 @@
-# Build Stage
-FROM node:20-alpine as build
+# 1. Switch to 'slim' for better stability during the build process
+FROM node:20-slim as build
 
 WORKDIR /app
 
+# 2. Copy package files
 COPY package*.json ./
-# Explicitly install all dependencies, including devDependencies like Vite
-RUN npm install --include=dev 
 
+# 3. Use 'npm ci' (Clean Install). 
+# It is faster and more reliable for Docker builds than 'npm install'
+RUN npm ci
+
+# 4. Copy the rest of your SIMtinel source code
 COPY . .
-# This will now find 'vite' in node_modules/.bin/
+
+# 5. Run the build (now Vite will be found)
 RUN npm run build 
 
 # Production Stage
 FROM nginx:alpine
 
-# Ensure you are copying from the 'build' alias defined above
+# Copy from the 'build' stage
 COPY --from=build /app/dist /usr/share/nginx/html
+
+# Ensure your custom nginx.conf is in the same directory as this Dockerfile
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
