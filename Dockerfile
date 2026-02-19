@@ -1,5 +1,5 @@
-# 1. Switch to 'slim' for better stability during the build process
-FROM node:20-slim as build
+# 1. Switch to 'buster-slim' for better compatibility with older host OS (Ubuntu 18.04)
+FROM node:18-buster-slim as build
 
 WORKDIR /app
 

@@ -48,9 +48,9 @@ services:
     restart: always
 
   db:
-    image: mysql:8.0
+    image: mysql:5.7
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
       interval: 10s
       timeout: 5s
       retries: 5
