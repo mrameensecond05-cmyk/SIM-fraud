@@ -1,0 +1,74 @@
+version: '2.2'
+services:
+  # --- INFRASTRUCTURE: The Gateway ---
+  proxy-manager:
+    image: 'jc21/nginx-proxy-manager:latest'
+    ports:
+      - '80:80' # Standard Web Traffic
+      - '81:81' # Dashboard to manage your projects
+      - '443:443' # HTTPS
+    volumes:
+      - ./nginx/data:/data
+      - ./nginx/letsencrypt:/etc/letsencrypt
+    networks:
+      - cyber-net
+    restart: always
+
+  # --- PROJECT 1: SIMtinel (Fraud Detection) ---
+  sim-backend:
+    build:
+      context: ../../server # Points to /home/luffy/Desktop/Final-projects/SIM-fraud/server
+      dockerfile: Dockerfile
+    container_name: sim-backend
+    environment:
+      - DB_HOST=sim-db
+      - OLLAMA_URL=http://ai-engine:11434/api/generate
+      - PORT=5000
+    depends_on:
+      - sim-db
+      - ai-engine
+    networks:
+      - cyber-net
+    restart: always
+
+  sim-db:
+    image: mysql:5.7
+    container_name: sim-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: simfraud_db
+    volumes:
+      - sim_db_data:/var/lib/mysql
+      # Assuming schematic init is required, mount relative to build context or here
+      - ../../server/db_schema.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - cyber-net
+    restart: always
+
+  # --- PROJECT 2: LOTI (Attack Monitoring placeholder) ---
+  # loti-monitor:
+  #   image: php:apache # Replace with your build
+  #   container_name: loti-monitor
+  #   networks:
+  #     - cyber-net
+
+  # --- PROJECT 3: AI ENGINE (Shared) ---
+  ai-engine:
+    image: ollama/ollama
+    container_name: ollama
+    volumes:
+      - ollama_models:/root/.ollama
+    networks:
+      - cyber-net
+    restart: always
+
+networks:
+  cyber-net:
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: fd00:1::/64
+
+volumes:
+  sim_db_data:
+  ollama_models:
