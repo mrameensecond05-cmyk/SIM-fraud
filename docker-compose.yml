@@ -19,6 +19,7 @@ services:
       - DB_PASSWORD=rootpassword
       - DB_NAME=simfraud_db
       - OLLAMA_URL=http://ollama:11434/api/generate
+      - FAST2SMS_API_KEY=lW4T2pKXLwinFNhsBq6bvIR8dr9DfjZex51aUoV7GtJSyCAQEcm68h0KzTnDyjfPs5A2vJbRa4g9kldq
     depends_on:
       - db
       - ollama
