@@ -38,10 +38,10 @@ ollama serve
 
 ## 3. Pull the Model
 
-The code expects the `mistral` model. Run this in a *new* terminal window:
+The code expects the `tinyllama` model. Run this in a *new* terminal window:
 
 ```bash
-ollama pull mistral
+ollama pull tinyllama
 ```
 
 ## 4. Verify Integration
@@ -62,5 +62,5 @@ ollama pull mistral
 ## Troubleshooting
 
 -   **"Connection Refused"**: The server is not running. Run `ollama serve`.
--   **"Model not found"**: You forgot step 3 (`ollama pull mistral`).
+-   **"Model not found"**: You forgot step 3 (`ollama pull tinyllama`).
 -   **Slow Response**: Local AI inference depends on your GPU/CPU. It may take a few seconds per SMS.

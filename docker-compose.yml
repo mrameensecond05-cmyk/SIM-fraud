@@ -14,11 +14,14 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - MONGODB_URI=mongodb+srv://mrameensecond05_db_user:LkOZ7RFlOdTPYQNf@cluster0.a1it1ws.mongodb.net/simfraud_db?retryWrites=true&w=majority
-      - PORT=5000
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=rootpassword
+      - DB_NAME=simfraud_db
       - OLLAMA_URL=http://ollama:11434/api/generate
       - FAST2SMS_API_KEY=lW4T2pKXLwinFNhsBq6bvIR8dr9DfjZex51aUoV7GtJSyCAQEcm68h0KzTnDyjfPs5A2vJbRa4g9kldq
     depends_on:
+      - db
       - ollama
     volumes:
       - ./server/public:/app/public
@@ -28,10 +31,14 @@ services:
     build: ./server
     command: sh -c "npm run seed && npm run simulate"
     environment:
-      - MONGODB_URI=mongodb+srv://mrameensecond05_db_user:LkOZ7RFlOdTPYQNf@cluster0.a1it1ws.mongodb.net/simfraud_db?retryWrites=true&w=majority
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=rootpassword
+      - DB_NAME=simfraud_db
     depends_on:
       - backend
-    restart: on-failure
+      - db
+    restart: always
 
   ollama:
     image: ollama/ollama:latest
@@ -39,7 +46,38 @@ services:
       - "11434:11434"
     volumes:
       - ollama_models:/root/.ollama
+    entrypoint: [ "/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull tinyllama && wait" ]
+    restart: always
+
+  db:
+    image: mysql:5.7
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: simfraud_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./server/db_schema.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: always
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: rootpassword
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
     restart: always
 
 volumes:
+  db_data:
   ollama_models:
