@@ -8,6 +8,8 @@ COPY package*.json ./
 
 # 3. Use 'npm ci' (Clean Install). 
 # It is faster and more reliable for Docker builds than 'npm install'
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+
 RUN npm ci
 
 # 4. Copy the rest of your SIMtinel source code
