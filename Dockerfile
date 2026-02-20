@@ -1,14 +1,9 @@
 FROM node:18-buster-slim as build
 
 # Fix for archived Debian Buster repositories
-RUN sed -i 's/deb.debian.org/archive.debian.org/g' /etc/apt/sources.list && \
-    sed -i 's/security.debian.org/archive.debian.org/g' /etc/apt/sources.list && \
-    sed -i '/stretch-updates/d' /etc/apt/sources.list
-
 WORKDIR /app
 
 # Rest of your commands...
-RUN sudo apt-get update && sudo apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 RUN npm ci
 
