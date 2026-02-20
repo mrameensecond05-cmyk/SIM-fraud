@@ -1,0 +1,13 @@
+{
+  "name": "SIMtinel - Fraud Detection",
+  "description": "Native Android fraud detection system using Jetpack Compose and Gemini 3 Flash.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "androidPermissions": [
+    "android.permission.RECEIVE_SMS",
+    "android.permission.READ_SMS",
+    "android.permission.READ_PHONE_STATE",
+    "android.permission.INTERNET"
+  ]
+}

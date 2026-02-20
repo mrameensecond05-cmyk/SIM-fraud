@@ -1,0 +1,45 @@
+version: '2.2'
+
+services:
+  frontend:
+    build: .
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
+
+  backend:
+    build: ./server
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGODB_URI=mongodb+srv://mrameensecond05_db_user:LkOZ7RFlOdTPYQNf@cluster0.a1it1ws.mongodb.net/simfraud_db?retryWrites=true&w=majority
+      - PORT=5000
+      - OLLAMA_URL=http://ollama:11434/api/generate
+      - FAST2SMS_API_KEY=lW4T2pKXLwinFNhsBq6bvIR8dr9DfjZex51aUoV7GtJSyCAQEcm68h0KzTnDyjfPs5A2vJbRa4g9kldq
+    depends_on:
+      - ollama
+    volumes:
+      - ./server/public:/app/public
+    restart: always
+
+  simulation:
+    build: ./server
+    command: sh -c "npm run seed && npm run simulate"
+    environment:
+      - MONGODB_URI=mongodb+srv://mrameensecond05_db_user:LkOZ7RFlOdTPYQNf@cluster0.a1it1ws.mongodb.net/simfraud_db?retryWrites=true&w=majority
+    depends_on:
+      - backend
+    restart: on-failure
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    restart: always
+
+volumes:
+  ollama_models:
